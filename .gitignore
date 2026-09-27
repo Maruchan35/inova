@@ -1,0 +1,30 @@
+# Secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Bases de datos locales
+*.sqlite
+*.db

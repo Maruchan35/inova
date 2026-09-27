@@ -1,0 +1,10 @@
+#!/bin/sh
+# Bloquea push directo a main: todo entra por Pull Request (ver AGENTS.md).
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "BLOQUEADO: no se hace push directo a main."
+    echo "Sube tu rama (git push -u origin <tu-rama>) y abre un Pull Request."
+    exit 1
+  fi
+done
+exit 0
