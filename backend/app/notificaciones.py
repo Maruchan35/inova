@@ -11,6 +11,7 @@ Los mensajes los manda el bot de backend/whatsapp. Sin WHATSAPP_BOT_URL en backe
 """
 
 import os
+import re
 import secrets
 import sqlite3
 import threading
@@ -246,7 +247,9 @@ def _contar_pedido(telefono: str) -> None:
 def enviar(telefono: str, texto: str) -> tuple[str, str | None]:
     """Manda un mensaje por el bot de WhatsApp. Devuelve (estatus, detalle). Nunca lanza errores."""
     url = os.environ.get("WHATSAPP_BOT_URL", "").strip()
-    registro = {"telefono": f"{telefono[:4]}******{telefono[-2:]}", "texto": texto, "hora": time.strftime("%H:%M:%S")}
+    # La bitácora se puede ver desde fuera: nunca guarda el código de verificación ni el número completo.
+    oculto = re.sub(r"\*\d{6}\*", "*••••••*", texto)
+    registro = {"telefono": f"{telefono[:4]}******{telefono[-2:]}", "texto": oculto, "hora": time.strftime("%H:%M:%S")}
     if not url:
         estatus, detalle = "prueba", "Sin WHATSAPP_BOT_URL: el mensaje no se envió"
     else:

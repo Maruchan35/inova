@@ -116,3 +116,13 @@ def test_si_el_bot_no_responde_se_avisa_y_queda_en_la_bitacora(cliente, monkeypa
     r = cliente.post("/api/suscripciones", json={"telefono": "4627778899", "estado_id": 1, "municipio_id": 1})
     assert r.status_code == 503
     assert cliente.get("/api/prueba/avisos").json()[0]["estatus"] == "error"
+
+
+def test_la_bitacora_publica_no_muestra_codigos(cliente):
+    from app import notificaciones
+
+    notificaciones.limpiar_limites()
+    assert cliente.post("/api/suscripciones", json={"telefono": "4628889900", "estado_id": 1, "municipio_id": 1}).status_code == 202
+    ultimo = cliente.get("/api/prueba/avisos").json()[0]
+    assert ultimo["estatus"] == "prueba" and "*••••••*" in ultimo["texto"]
+    assert not any(c.isdigit() for c in ultimo["texto"].split("*")[1])
