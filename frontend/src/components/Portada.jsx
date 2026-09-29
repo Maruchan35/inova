@@ -32,7 +32,7 @@ export default function Portada({ onElegir }) {
         }
       });
     });
-    setResultados(res.slice(0, 10)); // max 10
+    setResultados(res.slice(0, 8)); // max 8
   }, [texto, estados]);
 
   useEffect(() => {
@@ -48,36 +48,86 @@ export default function Portada({ onElegir }) {
   return (
     <>
       <section className="hero">
-        <h1>Transparencia Inteligente para Todos</h1>
-        <div className="hero-description">
-          <p>En MÃ©xico existe informaciÃ³n pÃºblica sobre presupuestos, contratos, proveedores y obras, pero suele estar dispersa en diferentes portales y documentos extensos, lo que dificulta su consulta y comprensiÃ³n por parte de la ciudadanÃ­a.</p>
-          <p><span className="brand-highlight">CabildoAbierto</span> busca solucionar esta barrera mediante inteligencia artificial y RAG, permitiendo realizar preguntas en lenguaje natural y obtener respuestas claras junto con su fuente y pÃ¡gina correspondiente. AsÃ­, la informaciÃ³n pÃºblica se vuelve mÃ¡s accesible, verificable y Ãºtil para la participaciÃ³n ciudadana.</p>
+        <h1>Explora la informaciÃ³n de tu ciudad</h1>
+        <p>Busca cualquier estado o municipio y accede a informes, presupuestos y contratos al instante.</p>
+        
+        <div className="search-container" ref={wrapperRef}>
+          <div className="search-bar">
+            <i className="fa-regular fa-magnifying-glass" style={{ color: '#aaa', marginLeft: '15px' }}></i>
+            <input 
+              type="text" 
+              value={texto} 
+              onChange={e => setTexto(e.target.value)} 
+              placeholder="Ej. Irapuato, Guanajuato..." 
+            />
+            <button className="search-btn">
+              Explorar
+            </button>
+          </div>
+          
+          {resultados.length > 0 && (
+            <ul className="search-results">
+              {resultados.map((r, i) => (
+                <li key={i} onClick={() => onElegir({ tipo: r.tipo, id: r.id })}>
+                  <i className="fa-regular fa-location-dot" style={{ marginRight: '10px', color: '#ccc' }}></i>
+                  {r.nombre} {r.tipo === 'estado' ? '(Estado)' : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
-      <div className="search-container" ref={wrapperRef}>
-        <div className="search-bar">
-          <input 
-            type="text" 
-            value={texto} 
-            onChange={e => setTexto(e.target.value)} 
-            placeholder="Buscar por estado o municipio (ej. Irapuato, Guanajuato)..." 
-          />
-          <button className="search-btn">
-            <i className="fa-solid fa-location-arrow"></i> Buscar Obras
-          </button>
-        </div>
+      <section style={{ textAlign: 'center', marginTop: '3rem', overflow: 'hidden' }}>
+        <h3 style={{ color: 'var(--text-muted)', fontWeight: 400, marginBottom: '2rem' }}>Â¿CÃ³mo funciona CabildoAbierto?</h3>
         
-        {resultados.length > 0 && (
-          <ul className="search-results">
-            {resultados.map((r, i) => (
-              <li key={i} onClick={() => onElegir({ tipo: r.tipo, id: r.id })}>
-                {r.nombre} {r.tipo === 'estado' ? '(Estado)' : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        <div className="como-funciona-container">
+          <div className="como-funciona-track">
+            <div className="cf-card">
+              <i className="fa-regular fa-file-pdf"></i>
+              <h4>1. RecopilaciÃ³n de datos</h4>
+              <p>Los gobiernos suben sus documentos pÃºblicos y reportes.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-microchip"></i>
+              <h4>2. Procesamiento de IA</h4>
+              <p>La IA extrae resÃºmenes y puntos clave automÃ¡ticamente.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-message"></i>
+              <h4>3. BÃºsqueda Inteligente</h4>
+              <p>Haces preguntas y recibes respuestas directas y claras.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-check-circle"></i>
+              <h4>4. VerificaciÃ³n</h4>
+              <p>Revisas la fuente exacta con un solo clic.</p>
+            </div>
+            
+            {/* Duplicated for seamless loop */}
+            <div className="cf-card">
+              <i className="fa-regular fa-file-pdf"></i>
+              <h4>1. RecopilaciÃ³n de datos</h4>
+              <p>Los gobiernos suben sus documentos pÃºblicos y reportes.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-microchip"></i>
+              <h4>2. Procesamiento de IA</h4>
+              <p>La IA extrae resÃºmenes y puntos clave automÃ¡ticamente.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-message"></i>
+              <h4>3. BÃºsqueda Inteligente</h4>
+              <p>Haces preguntas y recibes respuestas directas y claras.</p>
+            </div>
+            <div className="cf-card">
+              <i className="fa-regular fa-check-circle"></i>
+              <h4>4. VerificaciÃ³n</h4>
+              <p>Revisas la fuente exacta con un solo clic.</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

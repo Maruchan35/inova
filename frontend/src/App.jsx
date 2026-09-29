@@ -16,7 +16,7 @@ export default function App() {
     <>
       <header>
         <div className="logo">
-          <i className="fa-solid fa-landmark-dome"></i> CabildoAbierto
+          <i className="fa-regular fa-message"></i> CabildoAbierto
         </div>
         <nav>
           <ul>
@@ -27,8 +27,8 @@ export default function App() {
             </li>
             {(lugar || documentoId) && (
               <li>
-                <button className="btn-link" style={{ fontWeight: 700 }} onClick={() => (documentoId ? setDocumentoId(null) : setLugar(null))}>
-                  <i className="fa-solid fa-arrow-left"></i> Volver atrÃ¡s
+                <button className="btn-link" onClick={() => (documentoId ? setDocumentoId(null) : setLugar(null))}>
+                  <i className="fa-solid fa-arrow-left"></i> Volver
                 </button>
               </li>
             )}
