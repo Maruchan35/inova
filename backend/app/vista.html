@@ -68,6 +68,7 @@
   .respuesta { margin-top: 14px; }
   .cita { border-left: 3px solid var(--marca); padding: 6px 12px; margin: 10px 0; background: #fffdf5; }
   .cita .tenue { font-size: .85rem; }
+  .detalle { font-size: .8rem; margin: 10px 0 0; }
 
   /* Visor de páginas */
   dialog { border: 0; border-radius: var(--radio); padding: 0; width: min(760px, 94vw); max-height: 86vh; }
@@ -238,11 +239,27 @@ function activarPregunta(filtro) {
       salida.innerHTML = `<p><strong>${esc(r.respuesta)}</strong></p>${r.citas.map((c) => `
         <div class="cita"><div class="tenue"><a href="#/documento/${c.documento_id}">${esc(c.documento_titulo)}</a>
           · ${esc(c.lugar)} ${botonPagina(c.documento_id, c.pagina, c.documento_titulo)}</div>
-          <div>${marcar(c.fragmento)}</div></div>`).join("")}`;
+          <div>${marcar(c.fragmento)}</div></div>`).join("")}<p class="tenue detalle" id="detalle"></p>`;
+      mostrarDetalle(r.pregunta);
     } catch (err) {
       salida.innerHTML = `<div class="error-caja">${esc(err.message)}</div>`;
     }
   });
+}
+
+// De dónde salió la respuesta y cuánto costó (bitácora del backend; solo para la demo).
+async function mostrarDetalle(pregunta) {
+  const r = (await api("/prueba/preguntas").catch(() => [])).find((x) => x.pregunta === pregunta);
+  if (!r) return;
+  const u = r.uso || {};
+  const textos = {
+    "caché propio": `Respuesta guardada: ya se había preguntado, no se llamó a la IA · ${r.segundos} s · $0`,
+    "DeepSeek": `Respondió DeepSeek (${r.modo}) en ${r.segundos} s · $${r.costo_usd.toFixed(4)} USD` +
+      (u.entrada ? ` · ${u.cache.toLocaleString("es-MX")} de ${u.entrada.toLocaleString("es-MX")} tokens salieron del caché de DeepSeek` : ""),
+    "respaldo sin IA": `Sin IA (${r.aviso || "respaldo"}): se muestran los fragmentos encontrados`,
+    "búsqueda sin resultados": "La búsqueda no encontró páginas relacionadas; no se llamó a la IA · $0",
+  };
+  document.getElementById("detalle").textContent = textos[r.origen] || "";
 }
 
 // --- Visor de páginas: cualquier botón "pág. N" abre la página original ---
