@@ -1,6 +1,7 @@
-# inova — Hackatech
+# CabildoAbierto AI — Hackatón TecNM
 
-_Descripción del proyecto: se llena cuando se anuncie el reto._
+Consulta de actas de cabildo con preguntas en lenguaje natural, citas exactas de acta y página,
+y concentración de compras por proveedor. **Cómo ejecutarlo:** sección "Proyecto" de [AGENTS.md](AGENTS.md).
 
 ## Para el equipo
 

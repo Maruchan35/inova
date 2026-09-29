@@ -4,9 +4,9 @@
 
 | Rol | Bloque | Responsable |
 |---|---|---|
-| Frontend | `frontend/` | _nombre_ |
-| Backend | `backend/` | _nombre_ |
-| Datos | `datos/` | _nombre_ |
+| Frontend | `frontend/` | Alisson |
+| Backend | `backend/` | Jorge |
+| Datos | `datos/` | Marko |
 | Requisitos y documentación | `docs/` | _nombre_ |
 | Exposición | demo y presentación | _nombre_ |
 

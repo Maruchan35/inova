@@ -1,27 +1,44 @@
-# Requisitos
+# Requisitos — CabildoAbierto AI
 
 ## Reto
 
-_Texto del reto tal como lo anuncien._
+Hackatón TecNM · Ciberdemocracia y Tecnologías para la Gestión Pública · **Propuesta 3: CabildoAbierto AI
+(Auditoría RAG)**.
 
 ## Problema que resolvemos
 
-_Una o dos frases._
+Las actas de cabildo, licitaciones y contratos de obra se publican en PDFs no indexables, lo que hace
+imposible que la ciudadanía fiscalice cómo se gasta el dinero público.
 
-## Requisitos funcionales
+## Alcance MVP (24-36 h)
 
-| ID | Requisito | Prioridad (debe / debería / opcional) | Bloque | Issue |
-|---|---|---|---|---|
-| RF-01 | | debe | | # |
+| ID | Requisito | Prioridad | Bloque |
+|---|---|---|---|
+| RF-01 | Ingesta de 5 actas reales de cabildo (PDF → texto por página en la base de datos) | debe | datos |
+| RF-02 | Preguntas en lenguaje natural con respuesta y **cita textual con acta y página** | debe | backend + frontend |
+| RF-03 | Indicador de concentración de compras a contratistas | debe | todos |
+| RF-04 | Ver la página completa del acta citada | debe | frontend |
+| RF-05 | Respuesta en menos de 2 segundos | debe | backend |
+| RF-06 | Respuesta redactada con IA a partir de las citas | debería | backend |
+| RF-07 | Visualizador de grafo de proveedores | debería | frontend + backend |
+| RF-08 | OCR para PDFs escaneados | opcional | datos |
 
 ## Requisitos no funcionales
 
-- _Rendimiento, seguridad, usabilidad..._
+- La página muestra **solo** datos que vienen de la base de datos (vía backend).
+- Nunca inventar información: toda respuesta va respaldada por citas.
+- Interfaz en español, clara para jueces no técnicos.
+
+## Diferenciador para la demo
+
+Preguntar en lenguaje natural sobre montos ejercidos y obtener la foja presupuestal exacta (acta y
+página) en menos de 2 segundos.
 
 ## Fuera de alcance
 
-- _Lo que decidimos NO hacer, para no perder tiempo._
+- Cuentas de usuario e inicio de sesión.
+- Subir PDFs desde la página (la ingesta se hace con un script).
 
 ## Criterios de evaluación de los jueces
 
-- _Si los dan, anótalos aquí: guían qué priorizar._
+- _Anotar aquí la rúbrica si la dan._
