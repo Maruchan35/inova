@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CabildoAbierto AI · Vista previa</title>
+<style>
+  :root {
+    --tinta: #16233b; --tenue: #5b6778; --fondo: #f4f6f9; --tarjeta: #fff; --borde: #e3e8ef;
+    --azul: #1f4e8c; --verde: #0f766e; --marca: #fde68a; --radio: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tinta);
+         background: var(--fondo); line-height: 1.5; }
+  a { color: var(--azul); text-decoration: none; } a:hover { text-decoration: underline; }
+  .barra { background: var(--tinta); color: #fff; padding: 12px 16px; display: flex; align-items: center;
+           justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .logo { color: #fff; font-weight: 700; font-size: 1.15rem; } .logo b { color: #5eead4; }
+  .aviso { font-size: .8rem; background: rgba(255,255,255,.12); padding: 3px 10px; border-radius: 99px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 6px 0 8px; }
+  h2 { font-size: 1.2rem; margin: 28px 0 12px; }
+  .tenue { color: var(--tenue); }
+  .migas { font-size: .9rem; color: var(--tenue); } .migas a { color: var(--tenue); }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px; }
+  .rejilla { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+  .chip { display: inline-block; font-size: .8rem; padding: 2px 10px; border-radius: 99px; background: #e8eef7;
+          color: var(--azul); margin: 0 6px 6px 0; }
+  a.chip:hover { background: var(--azul); color: #fff; text-decoration: none; }
+  .pag { border: 1px solid #b7c6dc; background: #fff; color: var(--azul); border-radius: 99px; font-size: .78rem;
+         padding: 1px 9px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+  .pag:hover { background: var(--azul); color: #fff; }
+  mark { background: var(--marca); padding: 0 2px; border-radius: 3px; }
+  button, input { font: inherit; }
+
+  /* Inicio */
+  .portada { background: linear-gradient(135deg, var(--tinta), var(--azul) 60%, var(--verde)); color: #fff;
+             border-radius: 18px; padding: clamp(24px, 5vw, 48px); }
+  .portada p { max-width: 620px; opacity: .9; }
+  .buscador { width: 100%; max-width: 520px; padding: 13px 16px; border-radius: 10px; border: 0; font-size: 1rem; margin-top: 10px; }
+  .pasos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 16px; }
+  .paso b { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+            background: var(--verde); color: #fff; margin-right: 8px; }
+  .estado h3 { margin: 0 0 10px; }
+
+  /* Lugar */
+  .seccion { border-top: 4px solid var(--color, var(--azul)); }
+  .seccion h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  .docs { list-style: none; padding: 0; margin: 12px 0 0; }
+  .docs li { padding: 10px 0; border-top: 1px solid var(--borde); }
+  .docs a { font-weight: 600; }
+  .estatus { font-size: .75rem; padding: 1px 8px; border-radius: 99px; background: #fef3c7; color: #92400e; margin-left: 6px; }
+  .estatus.error { background: #fee2e2; color: #991b1b; }
+  .barra-prov { height: 10px; background: #e8eef7; border-radius: 99px; overflow: hidden; margin: 4px 0 12px; }
+  .barra-prov div { height: 100%; background: var(--verde); }
+
+  /* Documento */
+  .resumen { background: #ecfdf5; border-color: #a7f3d0; font-size: 1.08rem; }
+  .resumen h2 { margin-top: 0; color: var(--verde); }
+  .puntos { list-style: none; padding: 0; display: grid; gap: 10px; }
+  .puntos li { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+
+  /* Preguntas */
+  .preguntar form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .preguntar input { flex: 1 1 260px; padding: 11px 14px; border: 1px solid var(--borde); border-radius: 10px; }
+  .preguntar button[type=submit] { background: var(--verde); color: #fff; border: 0; border-radius: 10px; padding: 11px 18px;
+                                   cursor: pointer; font-weight: 600; }
+  .respuesta { margin-top: 14px; }
+  .cita { border-left: 3px solid var(--marca); padding: 6px 12px; margin: 10px 0; background: #fffdf5; }
+  .cita .tenue { font-size: .85rem; }
+
+  /* Visor de páginas */
+  dialog { border: 0; border-radius: var(--radio); padding: 0; width: min(760px, 94vw); max-height: 86vh; }
+  dialog::backdrop { background: rgba(22, 35, 59, .55); }
+  .visor-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 18px;
+               border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: #fff; }
+  .visor-texto { padding: 18px; white-space: pre-wrap; font-size: .95rem; overflow: auto; max-height: 62vh; }
+  .visor-pie { display: flex; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--borde); }
+  .visor-pie button, .cerrar { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .visor-pie button:disabled { opacity: .4; cursor: default; }
+  .error-caja { background: #fee2e2; color: #991b1b; padding: 14px; border-radius: var(--radio); }
+  footer { text-align: center; font-size: .8rem; color: var(--tenue); padding: 0 16px 24px; }
+</style>
+</head>
+<body>
+<header class="barra">
+  <a class="logo" href="#/">CabildoAbierto <b>AI</b></a>
+  <span class="aviso">Vista previa del backend · provisional</span>
+</header>
+<main id="app"></main>
+<footer>Página provisional para ver cómo se comporta el backend. La página oficial la construye el equipo de frontend.</footer>
+
+<dialog id="visor">
+  <div class="visor-cab"><div><strong id="visor-titulo"></strong><div class="tenue" id="visor-pagina"></div></div>
+    <button class="cerrar" onclick="visor.close()">Cerrar</button></div>
+  <div class="visor-texto" id="visor-texto"></div>
+  <div class="visor-pie"><button id="visor-ant">‹ Anterior</button><button id="visor-sig">Siguiente ›</button></div>
+</dialog>
+
+<script>
+const app = document.getElementById("app");
+const visor = document.getElementById("visor");
+const COLORES = { informes: "#1f4e8c", presupuesto: "#0f766e", obras: "#b45309", actas: "#6d28d9", contratos: "#be123c" };
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const marcar = (s) => esc(s).replaceAll("[[", "<mark>").replaceAll("]]", "</mark>");
+const normalizar = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+const pesos = (n) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+const botonPagina = (docId, pagina, titulo) =>
+  pagina ? `<button class="pag" data-doc="${docId}" data-pagina="${pagina}" data-titulo="${esc(titulo)}">pág. ${pagina}</button>` : "";
+
+async function api(ruta, opciones) {
+  const r = await fetch("/api" + ruta, opciones);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `Error ${r.status} en ${ruta}`);
+  return r.json();
+}
+
+// --- Pantallas ---
+
+async function verInicio() {
+  const estados = await api("/estados");
+  app.innerHTML = `
+    <section class="portada">
+      <h1>Lo que hace tu gobierno, explicado claro</h1>
+      <p>Informes, presupuestos, obras, actas y contratos, resumidos para que los entiendas en minutos.
+         Cada dato te dice de qué página del documento oficial sale.</p>
+      <input class="buscador" id="filtro" placeholder="Busca tu estado o municipio…" autocomplete="off" />
+    </section>
+    <h2>Elige un lugar</h2>
+    <div class="rejilla" id="lugares"></div>
+    <h2>Cómo funciona</h2>
+    <div class="pasos">
+      <div class="tarjeta paso"><b>1</b>El gobierno sube sus documentos oficiales en PDF.</div>
+      <div class="tarjeta paso"><b>2</b>Se procesan <strong>una sola vez</strong>: texto por página, resumen y puntos clave.</div>
+      <div class="tarjeta paso"><b>3</b>Tú lees lo importante, buscas o preguntas, y ves la página de donde sale.</div>
+    </div>`;
+  const pintar = (texto) => {
+    const q = normalizar(texto.trim());
+    const tarjetas = estados.map((e) => {
+      const municipios = e.municipios.filter((m) => !q || normalizar(m.nombre).includes(q) || normalizar(e.nombre).includes(q));
+      if (q && !municipios.length && !normalizar(e.nombre).includes(q)) return "";
+      return `<div class="tarjeta estado">
+        <h3><a href="#/estado/${e.id}">${esc(e.nombre)}</a></h3>
+        <div>${municipios.map((m) => `<a class="chip" href="#/municipio/${m.id}">${esc(m.nombre)}</a>`).join("")
+          || '<span class="tenue">Solo documentos estatales</span>'}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("lugares").innerHTML = tarjetas || '<p class="tenue">No encontramos ese lugar.</p>';
+  };
+  document.getElementById("filtro").addEventListener("input", (e) => pintar(e.target.value));
+  pintar("");
+}
+
+async function verLugar(tipo, id) {
+  const lugar = await api(`/${tipo === "estado" ? "estados" : "municipios"}/${id}`);
+  const filtro = tipo === "estado" ? { estado_id: lugar.id } : { municipio_id: lugar.id };
+  const proveedores = await api(`/proveedores/concentracion?${new URLSearchParams(filtro)}`);
+  const total = lugar.secciones.reduce((n, s) => n + s.documentos.length, 0);
+  app.innerHTML = `
+    <div class="migas"><a href="#/">Inicio</a>${tipo === "municipio"
+      ? ` / <a href="#/estado/${lugar.estado.id}">${esc(lugar.estado.nombre)}</a>` : ""}</div>
+    <h1>${esc(lugar.nombre)}</h1>
+    <p class="tenue">${tipo === "estado" ? "Documentos del gobierno del estado" : `Municipio de ${esc(lugar.estado.nombre)}`}
+      · ${plural(total, "documento", "documentos")}</p>
+    ${cajaPregunta(`Pregunta sobre ${lugar.nombre}, por ejemplo: ¿cuánto se gasta en seguridad?`)}
+    <h2>Documentos por sección</h2>
+    <div class="rejilla">${lugar.secciones.map((s) => `
+      <div class="tarjeta seccion" style="--color:${COLORES[s.clave] || "var(--azul)"}">
+        <h3>${esc(s.nombre)}</h3>
+        <div class="tenue">${s.documentos.length ? plural(s.documentos.length, "documento", "documentos") : "Sin documentos todavía"}</div>
+        <ul class="docs">${s.documentos.map((d) => `
+          <li><a href="#/documento/${d.id}">${esc(d.titulo)}</a>${d.estatus !== "listo"
+            ? `<span class="estatus ${d.estatus === "error" ? "error" : ""}">${esc(d.estatus)}</span>` : ""}
+            <div class="tenue">${[d.anio, d.total_paginas ? plural(d.total_paginas, "página", "páginas") : ""].filter(Boolean).join(" · ")}</div></li>`).join("")}
+        </ul>
+      </div>`).join("")}
+    </div>
+    ${lugar.municipios?.length ? `<h2>Municipios</h2><div>${lugar.municipios.map((m) =>
+      `<a class="chip" href="#/municipio/${m.id}">${esc(m.nombre)}</a>`).join("")}</div>` : ""}
+    ${proveedores.length ? `<h2>¿A quién se le paga más?</h2><div class="tarjeta">${proveedores.map((p) => `
+      <div><strong>${esc(p.nombre)}</strong> <span class="tenue">· ${plural(p.contratos, "contrato", "contratos")} ·
+        ${pesos(p.monto_total)} · ${p.porcentaje}%</span></div>
+      <div class="barra-prov"><div style="width:${p.porcentaje}%"></div></div>`).join("")}</div>` : ""}`;
+  activarPregunta(filtro);
+}
+
+async function verDocumento(id) {
+  const d = await api(`/documentos/${id}`);
+  const lugar = d.municipio
+    ? `<a href="#/estado/${d.estado.id}">${esc(d.estado.nombre)}</a> / <a href="#/municipio/${d.municipio.id}">${esc(d.municipio.nombre)}</a>`
+    : `<a href="#/estado/${d.estado.id}">${esc(d.estado.nombre)}</a>`;
+  let cuerpo;
+  if (d.estatus === "listo") {
+    cuerpo = `
+      <div class="tarjeta resumen"><h2>En resumen</h2>${esc(d.resumen)}</div>
+      <h2>Lo más importante</h2>
+      <ul class="puntos">${d.puntos_clave.map((p) => `
+        <li class="tarjeta"><span>${esc(p.texto)}</span>${botonPagina(d.id, p.pagina, d.titulo)}</li>`).join("")
+        || '<li class="tenue">Este documento no tiene puntos clave.</li>'}</ul>
+      <h2>Pregúntale a este documento</h2>
+      ${cajaPregunta("Por ejemplo: ¿cuánto se destinó a obra pública?")}`;
+  } else if (d.estatus === "error") {
+    cuerpo = `<div class="error-caja">No se pudo procesar este documento: ${esc(d.error)}</div>`;
+  } else {
+    cuerpo = `<div class="tarjeta">Estamos procesando este documento (${esc(d.estatus)}). Esta página se actualiza sola.</div>`;
+    setTimeout(() => location.hash === `#/documento/${id}` && router(), 2000);
+  }
+  app.innerHTML = `
+    <div class="migas"><a href="#/">Inicio</a> / ${lugar}</div>
+    <h1>${esc(d.titulo)}</h1>
+    <div><span class="chip" style="background:${COLORES[d.seccion.clave] || "var(--azul)"};color:#fff">${esc(d.seccion.nombre)}</span>
+      ${d.anio ? `<span class="chip">${d.anio}</span>` : ""}
+      ${d.total_paginas ? `<span class="chip">${plural(d.total_paginas, "página", "páginas")}</span>` : ""}</div>
+    ${cuerpo}`;
+  if (d.estatus === "listo") activarPregunta({ documento_id: d.id });
+}
+
+// --- Preguntas ---
+
+function cajaPregunta(ejemplo) {
+  return `<div class="tarjeta preguntar">
+    <form id="form-pregunta"><input id="pregunta" placeholder="${esc(ejemplo)}" required />
+      <button type="submit">Preguntar</button></form>
+    <div class="respuesta" id="respuesta"></div></div>`;
+}
+
+function activarPregunta(filtro) {
+  document.getElementById("form-pregunta").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const salida = document.getElementById("respuesta");
+    salida.innerHTML = '<p class="tenue">Buscando en los documentos…</p>';
+    try {
+      const r = await api("/preguntar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pregunta: document.getElementById("pregunta").value, ...filtro }),
+      });
+      salida.innerHTML = `<p><strong>${esc(r.respuesta)}</strong></p>${r.citas.map((c) => `
+        <div class="cita"><div class="tenue"><a href="#/documento/${c.documento_id}">${esc(c.documento_titulo)}</a>
+          · ${esc(c.lugar)} ${botonPagina(c.documento_id, c.pagina, c.documento_titulo)}</div>
+          <div>${marcar(c.fragmento)}</div></div>`).join("")}`;
+    } catch (err) {
+      salida.innerHTML = `<div class="error-caja">${esc(err.message)}</div>`;
+    }
+  });
+}
+
+// --- Visor de páginas: cualquier botón "pág. N" abre la página original ---
+
+let actual = null;
+async function abrirPagina(doc, pagina, titulo) {
+  try {
+    const p = await api(`/documentos/${doc}/paginas/${pagina}`);
+    actual = { doc, pagina, titulo };
+    document.getElementById("visor-titulo").textContent = titulo || p.documento_titulo;
+    document.getElementById("visor-pagina").textContent = `Página ${pagina}`;
+    document.getElementById("visor-texto").textContent = p.texto;
+    document.getElementById("visor-ant").disabled = pagina <= 1;
+    document.getElementById("visor-sig").disabled = false;
+    if (!visor.open) visor.showModal();
+  } catch {
+    if (visor.open) document.getElementById("visor-sig").disabled = true;  // ya no hay más páginas
+  }
+}
+document.getElementById("visor-ant").onclick = () => abrirPagina(actual.doc, actual.pagina - 1, actual.titulo);
+document.getElementById("visor-sig").onclick = () => abrirPagina(actual.doc, actual.pagina + 1, actual.titulo);
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".pag");
+  if (b) abrirPagina(Number(b.dataset.doc), Number(b.dataset.pagina), b.dataset.titulo);
+});
+
+// --- Navegación con #/estado/1, #/municipio/1, #/documento/2 ---
+
+async function router() {
+  const [, tipo, id] = location.hash.split("/");
+  app.innerHTML = '<p class="tenue">Cargando…</p>';
+  try {
+    if (tipo === "estado" || tipo === "municipio") await verLugar(tipo, id);
+    else if (tipo === "documento") await verDocumento(id);
+    else await verInicio();
+  } catch (err) {
+    app.innerHTML = `<div class="error-caja">${esc(err.message)}</div><p><a href="#/">Volver al inicio</a></p>`;
+  }
+}
+window.addEventListener("hashchange", () => { router(); scrollTo(0, 0); });
+router();
+</script>
+</body>
+</html>
