@@ -99,3 +99,34 @@ CREATE TABLE contratos (
 
 CREATE INDEX idx_documentos_lugar ON documentos (estado_id, municipio_id, seccion_id);
 CREATE INDEX idx_contratos_documento ON contratos (documento_id);
+
+-- Obras públicas georreferenciadas para el mapa cívico de Guanajuato
+CREATE TABLE obras (
+    id                     INTEGER PRIMARY KEY,
+    municipio_id           INTEGER NOT NULL REFERENCES municipios(id),
+    documento_id           INTEGER REFERENCES documentos(id) ON DELETE SET NULL,
+    pagina_fuente          INTEGER,            -- foja o página del documento que respalda la obra
+    proveedor_id           INTEGER REFERENCES proveedores(id),
+    contrato_id            INTEGER REFERENCES contratos(id),
+    titulo                 TEXT NOT NULL,
+    descripcion            TEXT,
+    categoria              TEXT NOT NULL,      -- 'urbanizacion', 'agua_drenaje', 'electrificacion', 'educacion', 'salud', 'seguridad'
+    estatus                TEXT NOT NULL DEFAULT 'en_proceso'
+                           CHECK (estatus IN ('planeada', 'en_proceso', 'concluida', 'cancelada')),
+    latitud                REAL NOT NULL,
+    longitud               REAL NOT NULL,
+    direccion              TEXT,
+    colonia                TEXT,
+    presupuesto_aprobado   REAL NOT NULL DEFAULT 0.0,
+    presupuesto_modificado REAL NOT NULL DEFAULT 0.0,
+    presupuesto_ejercido   REAL NOT NULL DEFAULT 0.0,
+    variacion_porcentaje   REAL NOT NULL DEFAULT 0.0,
+    nivel_alerta           TEXT NOT NULL DEFAULT 'normal'
+                           CHECK (nivel_alerta IN ('normal', 'precaucion', 'critico')),
+    analisis_alerta        TEXT,               -- justificación o explicación del semáforo
+    anio                   INTEGER NOT NULL
+);
+
+CREATE INDEX idx_obras_municipio ON obras (municipio_id);
+CREATE INDEX idx_obras_alerta ON obras (nivel_alerta);
+

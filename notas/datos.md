@@ -24,9 +24,16 @@ Tú no extraes el texto de los PDFs: eso lo hace el procesador del backend (Jorg
 ## En progreso
 
 - Rama: `datos/catalogo-guanajuato-documentos`
-- Tarea: Catálogo completo de 46 municipios de Guanajuato y Baja California creado en `datos/lugares.sql` e integrado en `datos/init_db.py`. Creada carpeta `datos/pdfs/` y plantilla `datos/documentos.csv` para carga masiva.
+- Tarea: 
+  1. Catálogo completo de los 46 municipios de Guanajuato y Baja California integrado en `datos/lugares.sql`.
+  2. Integración de los datos oficiales de Guanajuato (`Downloads/basedtos`): PDF oficial de SHCP con 4,680 proyectos copiado a `datos/pdfs/informe-extendido-guanajuato.pdf` y registrado en `datos/documentos.csv`.
+  3. Extensión del esquema en `datos/schema.sql` agregando la tabla `obras` para el mapa cívico (latitud, longitud, presupuestos aprobado/modificado/ejercido, variación porcentual y semáforo de alerta `normal`, `precaucion`, `critico`).
+  4. Generado `datos/obras.sql` con obras georreferenciadas en Irapuato (Centro, Las Flores, San Juan, Las Reinas) y municipios del estado (León, Celaya, Guanajuato Capital, San Luis de la Paz).
+  5. `datos/init_db.py` actualizado y verificado: genera `datos/cabildo.db` sin errores.
 
 ## Decisiones y problemas
 
-- Se cargaron los 46 municipios oficiales de Guanajuato y municipios de Baja California para desbloquear las pruebas del backend y soportar la expansión de todo el estado.
-- Se configuró `init_db.py` para cargar `lugares.sql` antes de `seed.sql`, con `INSERT OR IGNORE` para evitar conflictos de claves.
+- Se usaron las coordenadas reales de colonias de Irapuato y municipios de Guanajuato para alimentar el mapa de Alisson (`frontend/`).
+- Se incorporaron las métricas de variación presupuestal (Aprobado vs Modificado vs Ejercido) extraídas de la Cuenta Pública 2025 para respaldar el análisis cívico de sobrecostos.
+- La tabla `obras` incluye `pagina_fuente` para mantener la regla de oro del proyecto: todo dato cita su foja exacta del documento oficial.
+

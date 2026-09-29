@@ -22,6 +22,9 @@ def crear(ruta: Path = RUTA_DEFAULT) -> Path:
         if lugares.is_file():
             con.executescript(lugares.read_text(encoding="utf-8"))
         con.executescript((DATOS / "seed.sql").read_text(encoding="utf-8"))
+        obras = DATOS / "obras.sql"
+        if obras.is_file():
+            con.executescript(obras.read_text(encoding="utf-8"))
         con.commit()
     finally:
         con.close()
