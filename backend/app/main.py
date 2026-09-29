@@ -1,4 +1,3 @@
-import re
 import sqlite3
 from pathlib import Path
 
@@ -7,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from . import config, procesamiento
+from . import config, preguntas, procesamiento
+from .busqueda import buscar_fragmentos, filtros_sql
 from .db import abrir, conectar
 from .procesamiento import llm
 
@@ -21,52 +21,6 @@ app.add_middleware(
 )
 
 Con = sqlite3.Connection
-
-
-def _filtros(estado_id=None, municipio_id=None, seccion=None, documento_id=None):
-    """Condiciones WHERE opcionales sobre documentos (d) y secciones (s)."""
-    condiciones, params = [], []
-    for valor, sql in (
-        (estado_id, "d.estado_id = ?"),
-        (municipio_id, "d.municipio_id = ?"),
-        (seccion, "s.clave = ?"),
-        (documento_id, "d.id = ?"),
-    ):
-        if valor is not None:
-            condiciones.append(sql)
-            params.append(valor)
-    return "".join(f" AND {c}" for c in condiciones), params
-
-
-def _consulta_fts(texto: str) -> str:
-    # Palabras de 3+ letras, entre comillas para que FTS5 no las interprete como operadores.
-    palabras = [p for p in re.findall(r"\w+", texto, flags=re.UNICODE) if len(p) >= 3]
-    return " OR ".join(f'"{p}"' for p in palabras)
-
-
-def buscar_fragmentos(con: Con, texto: str, limite: int = 10, **filtros) -> list[dict]:
-    consulta = _consulta_fts(texto)
-    if not consulta:
-        return []
-    where, params = _filtros(**filtros)
-    filas = con.execute(
-        f"""
-        SELECT d.id AS documento_id, d.titulo AS documento_titulo, s.clave AS seccion,
-               COALESCE(m.nombre, e.nombre) AS lugar, p.numero AS pagina,
-               snippet(paginas_fts, 0, '[[', ']]', '…', 24) AS fragmento
-        FROM paginas_fts
-        JOIN paginas p ON p.id = paginas_fts.rowid
-        JOIN documentos d ON d.id = p.documento_id
-        JOIN secciones s ON s.id = d.seccion_id
-        JOIN estados e ON e.id = d.estado_id
-        LEFT JOIN municipios m ON m.id = d.municipio_id
-        WHERE paginas_fts MATCH ?{where}
-        ORDER BY bm25(paginas_fts)
-        LIMIT ?
-        """,
-        (consulta, *params, limite),
-    ).fetchall()
-    return [dict(f) for f in filas]
 
 
 def _secciones_con_documentos(con: Con, estado_id: int, municipio_id: int | None) -> list[dict]:
@@ -215,12 +169,7 @@ class Pregunta(BaseModel):
 
 @app.post("/api/preguntar")
 def preguntar(datos: Pregunta, con: Con = Depends(conectar)):
-    citas = buscar_fragmentos(con, datos.pregunta, limite=5, **datos.model_dump(exclude={"pregunta"}))
-    if not citas:
-        respuesta = "No encontré información sobre eso en los documentos cargados."
-    else:
-        respuesta = f"Encontré {len(citas)} fragmento(s) relevante(s) en los documentos."
-    return {"pregunta": datos.pregunta, "respuesta": respuesta, "citas": citas}
+    return preguntas.responder(con, datos.pregunta, **datos.model_dump(exclude={"pregunta"}))
 
 
 @app.get("/api/proveedores/concentracion")
@@ -229,7 +178,7 @@ def concentracion(
     municipio_id: int | None = None,
     con: Con = Depends(conectar),
 ):
-    where, params = _filtros(estado_id=estado_id, municipio_id=municipio_id)
+    where, params = filtros_sql(estado_id=estado_id, municipio_id=municipio_id)
     filas = con.execute(
         f"""
         SELECT pr.id, pr.nombre, COUNT(c.id) AS contratos, SUM(c.monto) AS monto_total
@@ -308,6 +257,12 @@ def estado_motor():
 @app.get("/api/prueba/documentos/{documento_id}")
 def bitacora_documento(documento_id: int):
     return procesamiento.BITACORA.get(documento_id) or {}
+
+
+@app.get("/api/prueba/preguntas")
+def bitacora_preguntas():
+    """Últimas preguntas: de dónde salió la respuesta (caché propio, DeepSeek o respaldo), tiempo y costo."""
+    return list(preguntas.BITACORA)
 
 
 @app.get("/prueba", response_class=HTMLResponse)

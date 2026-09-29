@@ -6,8 +6,9 @@ import os
 import httpx
 
 # Precios de deepseek-flash en horario pico, USD por millón de tokens (api-docs.deepseek.com, sep 2026).
-# Solo se usan para estimar el costo en la página de prueba.
+# Solo se usan para estimar el costo. La entrada que DeepSeek ya tiene en su caché cuesta 50 veces menos.
 PRECIO_ENTRADA = 0.30
+PRECIO_ENTRADA_CACHE = 0.006
 PRECIO_SALIDA = 1.20
 
 
@@ -39,10 +40,14 @@ def pedir_json(sistema: str, usuario: str, uso: dict) -> dict:
     datos = respuesta.json()
     tokens = datos.get("usage", {})
     uso["entrada"] = uso.get("entrada", 0) + tokens.get("prompt_tokens", 0)
+    uso["cache"] = uso.get("cache", 0) + tokens.get("prompt_cache_hit_tokens", 0)  # parte de "entrada"
     uso["salida"] = uso.get("salida", 0) + tokens.get("completion_tokens", 0)
     uso["llamadas"] = uso.get("llamadas", 0) + 1
     return json.loads(datos["choices"][0]["message"]["content"])
 
 
 def costo_usd(uso: dict) -> float:
-    return (uso.get("entrada", 0) * PRECIO_ENTRADA + uso.get("salida", 0) * PRECIO_SALIDA) / 1_000_000
+    cache = uso.get("cache", 0)
+    return (
+        (uso.get("entrada", 0) - cache) * PRECIO_ENTRADA + cache * PRECIO_ENTRADA_CACHE + uso.get("salida", 0) * PRECIO_SALIDA
+    ) / 1_000_000

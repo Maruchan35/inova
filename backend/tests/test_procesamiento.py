@@ -111,7 +111,7 @@ def test_llm_pide_json_sin_modo_pensar(monkeypatch):
 
         def json(self):
             return {"choices": [{"message": {"content": '{"ok": true}'}}],
-                    "usage": {"prompt_tokens": 10, "completion_tokens": 5}}
+                    "usage": {"prompt_tokens": 10, "prompt_cache_hit_tokens": 8, "completion_tokens": 5}}
 
     def post(url, headers, json, timeout):
         enviado.update(json)
@@ -124,4 +124,6 @@ def test_llm_pide_json_sin_modo_pensar(monkeypatch):
     assert llm.pedir_json("s", "u", uso) == {"ok": True}
     assert enviado["thinking"] == {"type": "disabled"}
     assert enviado["response_format"] == {"type": "json_object"}
-    assert uso == {"entrada": 10, "salida": 5, "llamadas": 1}
+    assert uso == {"entrada": 10, "cache": 8, "salida": 5, "llamadas": 1}
+    # 2 tokens sin caché + 8 del caché de DeepSeek (50 veces más baratos) + 5 de salida
+    assert llm.costo_usd(uso) == pytest.approx((2 * 0.30 + 8 * 0.006 + 5 * 1.20) / 1_000_000)
