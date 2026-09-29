@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prueba del motor · CabildoAbierto AI</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 0 auto; padding: 16px; color: #1f2937; background: #f8fafc; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 14px 0; }
+  label { display: block; margin: 8px 0 2px; font-weight: 600; }
+  input, select, button { font-size: 1rem; padding: 6px; }
+  input[type=text], select { width: 100%; box-sizing: border-box; }
+  button { cursor: pointer; margin-top: 12px; }
+  .ok { color: #047857; } .mal { color: #b91c1c; } .tenue { color: #6b7280; }
+  .pag { background: none; border: none; color: #1d4ed8; text-decoration: underline; cursor: pointer; padding: 0; margin: 0; }
+  mark { background: #fde68a; } pre { white-space: pre-wrap; background: #f3f4f6; padding: 10px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>Prueba del motor de procesamiento</h1>
+<p id="motor" class="tenue">Revisando el motor…</p>
+
+<section>
+  <h2>1. Sube un PDF</h2>
+  <form id="form">
+    <label>Estado</label><select name="estado_id" id="estado"></select>
+    <label>Municipio (vacío = documento estatal)</label><select name="municipio_id" id="municipio"></select>
+    <label>Sección</label><select name="seccion" id="seccion"></select>
+    <label>Título</label><input type="text" name="titulo" required placeholder="Presupuesto Ciudadano 2026" />
+    <label>Año</label><input type="text" name="anio" placeholder="2026" />
+    <label>Archivo PDF</label><input type="file" name="archivo" accept="application/pdf" required />
+    <button>Subir y procesar</button>
+  </form>
+</section>
+
+<section id="resultado" hidden>
+  <h2>2. Resultado</h2>
+  <p id="estatus"></p>
+  <p id="bitacora" class="tenue"></p>
+  <h3>Resumen</h3><p id="resumen"></p>
+  <h3>Lo más importante</h3><ul id="puntos"></ul>
+</section>
+
+<section id="busqueda" hidden>
+  <h2>3. Busca dentro del documento</h2>
+  <form id="formBuscar"><input type="text" id="q" placeholder="Ej. salud, obra, seguridad" /> <button>Buscar</button></form>
+  <div id="resultados"></div>
+  <pre id="pagina" hidden></pre>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const api = (ruta, opciones) => fetch('/api' + ruta, opciones).then(async (r) => {
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status)
+  return r.json()
+})
+const opcion = (valor, texto) => `<option value="${valor}">${texto}</option>`
+const escapar = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+let documentoId = null, estados = []
+
+api('/prueba/motor').then((m) => {
+  $('motor').innerHTML = m.ia_configurada
+    ? `<span class="ok">IA activa: ${m.modelo}</span>`
+    : `<span class="mal">Sin clave de IA: se usará el respaldo sin IA.</span> Pon DEEPSEEK_API_KEY en backend/.env y reinicia el servidor.`
+})
+api('/secciones').then((s) => { $('seccion').innerHTML = s.map((x) => opcion(x.clave, x.nombre)).join('') })
+api('/estados').then((e) => {
+  estados = e
+  $('estado').innerHTML = e.map((x) => opcion(x.id, x.nombre)).join('')
+  llenarMunicipios()
+})
+$('estado').onchange = llenarMunicipios
+function llenarMunicipios() {
+  const estado = estados.find((x) => x.id == $('estado').value)
+  $('municipio').innerHTML = opcion('', '— documento estatal —') + (estado?.municipios || []).map((m) => opcion(m.id, m.nombre)).join('')
+}
+
+$('form').onsubmit = async (e) => {
+  e.preventDefault()
+  $('resultado').hidden = false; $('busqueda').hidden = true
+  $('estatus').textContent = 'Subiendo…'; $('resumen').textContent = ''; $('puntos').innerHTML = ''; $('bitacora').textContent = ''
+  try {
+    const r = await api('/documentos', { method: 'POST', body: new FormData(e.target) })
+    documentoId = r.id
+    seguir()
+  } catch (err) { $('estatus').innerHTML = `<span class="mal">Error: ${err.message}</span>` }
+}
+
+async function seguir() {
+  const doc = await api(`/documentos/${documentoId}`)
+  $('estatus').innerHTML = `Documento #${doc.id} · estatus: <b>${doc.estatus}</b>` + (doc.error ? ` <span class="mal">${doc.error}</span>` : '')
+  if (doc.estatus === 'pendiente' || doc.estatus === 'procesando') return setTimeout(seguir, 1000)
+  const b = await api(`/prueba/documentos/${documentoId}`)
+  const uso = b.uso || {}
+  $('bitacora').textContent = `Motor: ${b.motor} · ${b.segundos} s · ${doc.total_paginas} páginas` +
+    (uso.llamadas ? ` · ${uso.llamadas} llamada(s) a la IA · ${uso.entrada} tokens de entrada, ${uso.salida} de salida · costo aprox. $${b.costo_usd} USD` : '') +
+    (b.aviso ? ` · Aviso: ${b.aviso}` : '')
+  if (doc.estatus !== 'listo') return
+  $('resumen').textContent = doc.resumen
+  $('puntos').innerHTML = doc.puntos_clave.map((p) =>
+    `<li>${escapar(p.texto)} <button class="pag" onclick="verPagina(${p.pagina})">(pág. ${p.pagina})</button></li>`).join('')
+  $('busqueda').hidden = false
+}
+
+$('formBuscar').onsubmit = async (e) => {
+  e.preventDefault()
+  const r = await api(`/buscar?q=${encodeURIComponent($('q').value)}&documento_id=${documentoId}`)
+  $('resultados').innerHTML = r.resultados.length ? r.resultados.map((c) =>
+    `<p><button class="pag" onclick="verPagina(${c.pagina})">Página ${c.pagina}</button>: ` +
+    escapar(c.fragmento).replace(/\[\[(.*?)\]\]/g, '<mark>$1</mark>') + '</p>').join('') : '<p class="tenue">Sin resultados.</p>'
+}
+
+async function verPagina(n) {
+  const p = await api(`/documentos/${documentoId}/paginas/${n}`)
+  $('pagina').hidden = false
+  $('pagina').textContent = `Página ${n}\n\n${p.texto}`
+  $('pagina').scrollIntoView({ behavior: 'smooth' })
+}
+</script>
+</body>
+</html>

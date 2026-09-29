@@ -61,10 +61,12 @@ Texto completo de una página. `404` si no existe.
 { "documento_id": 2, "documento_titulo": "Presupuesto de Egresos 2026", "pagina": 1, "texto": "..." }
 ```
 
-#### `POST /api/documentos` — *en construcción (bloque backend)*
+#### `POST /api/documentos`
 Subir un PDF. `multipart/form-data` con: `archivo` (PDF), `estado_id`, `municipio_id` (opcional:
-vacío = documento estatal), `seccion` (clave), `titulo`, `anio`. Devuelve `{ "id": 6, "estatus": "pendiente" }`
-y lo procesa en segundo plano; el frontend consulta `GET /api/documentos/{id}` para ver el avance.
+vacío = documento estatal), `seccion` (clave), `titulo`, `anio` (opcional). Responde `201` con
+`{ "id": 6, "estatus": "pendiente" }` y lo procesa en segundo plano; el frontend consulta
+`GET /api/documentos/{id}` cada segundo para ver el avance. `400` si el archivo no es PDF, o si el
+estado, el municipio (del estado indicado) o la sección no existen.
 
 ### Búsqueda y preguntas
 
