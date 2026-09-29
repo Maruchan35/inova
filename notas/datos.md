@@ -23,9 +23,10 @@ Tú no extraes el texto de los PDFs: eso lo hace el procesador del backend (Jorg
 
 ## En progreso
 
-- Rama:
-- Tarea:
+- Rama: `datos/catalogo-guanajuato-documentos`
+- Tarea: Catálogo completo de 46 municipios de Guanajuato y Baja California creado en `datos/lugares.sql` e integrado en `datos/init_db.py`. Creada carpeta `datos/pdfs/` y plantilla `datos/documentos.csv` para carga masiva.
 
 ## Decisiones y problemas
 
--
+- Se cargaron los 46 municipios oficiales de Guanajuato y municipios de Baja California para desbloquear las pruebas del backend y soportar la expansión de todo el estado.
+- Se configuró `init_db.py` para cargar `lugares.sql` antes de `seed.sql`, con `INSERT OR IGNORE` para evitar conflictos de claves.

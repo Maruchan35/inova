@@ -18,6 +18,9 @@ def crear(ruta: Path = RUTA_DEFAULT) -> Path:
     con = sqlite3.connect(ruta)
     try:
         con.executescript((DATOS / "schema.sql").read_text(encoding="utf-8"))
+        lugares = DATOS / "lugares.sql"
+        if lugares.is_file():
+            con.executescript(lugares.read_text(encoding="utf-8"))
         con.executescript((DATOS / "seed.sql").read_text(encoding="utf-8"))
         con.commit()
     finally:
