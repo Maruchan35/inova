@@ -5,14 +5,20 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE estados (
-    id     INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL UNIQUE
+    id          INTEGER PRIMARY KEY,
+    nombre      TEXT NOT NULL UNIQUE,
+    clave_inegi TEXT,
+    latitud     REAL,
+    longitud    REAL
 );
 
 CREATE TABLE municipios (
-    id        INTEGER PRIMARY KEY,
-    estado_id INTEGER NOT NULL REFERENCES estados(id),
-    nombre    TEXT NOT NULL,
+    id          INTEGER PRIMARY KEY,
+    estado_id   INTEGER NOT NULL REFERENCES estados(id),
+    nombre      TEXT NOT NULL,
+    clave_inegi TEXT,
+    latitud     REAL,
+    longitud    REAL,
     UNIQUE (estado_id, nombre)
 );
 
@@ -24,24 +30,29 @@ CREATE TABLE secciones (
     orden  INTEGER NOT NULL
 );
 
--- Un documento es un PDF subido por un gobierno.
+-- Un documento oficial subido por un gobierno.
 -- municipio_id NULL = documento del gobierno estatal.
 CREATE TABLE documentos (
-    id            INTEGER PRIMARY KEY,
-    estado_id     INTEGER NOT NULL REFERENCES estados(id),
-    municipio_id  INTEGER REFERENCES municipios(id),
-    seccion_id    INTEGER NOT NULL REFERENCES secciones(id),
-    titulo        TEXT NOT NULL,
-    anio          INTEGER,
-    fecha         TEXT,              -- ISO 8601: AAAA-MM-DD
-    archivo       TEXT,              -- ruta del PDF original
-    total_paginas INTEGER NOT NULL DEFAULT 0,
+    id                INTEGER PRIMARY KEY,
+    estado_id         INTEGER NOT NULL REFERENCES estados(id),
+    municipio_id      INTEGER REFERENCES municipios(id),
+    seccion_id        INTEGER NOT NULL REFERENCES secciones(id),
+    titulo            TEXT NOT NULL,
+    anio              INTEGER,
+    fecha             TEXT,              -- ISO 8601: AAAA-MM-DD
+    archivo           TEXT,              -- ruta del PDF/documento
+    url_fuente        TEXT,              -- liga oficial de descarga/portal de transparencia
+    formato           TEXT DEFAULT 'pdf',-- pdf, docx, xlsx, csv
+    sha256            TEXT,              -- hash sha256 de verificación de integridad
+    fecha_publicacion TEXT,              -- fecha oficial en periódico o portal
+    dependencia       TEXT,              -- secretaría u órgano que lo emite
+    total_paginas     INTEGER NOT NULL DEFAULT 0,
     -- Procesamiento (bloque backend): pendiente → procesando → listo | error
-    estatus       TEXT NOT NULL DEFAULT 'pendiente'
-                  CHECK (estatus IN ('pendiente', 'procesando', 'listo', 'error')),
-    error         TEXT,              -- mensaje si estatus = 'error'
-    resumen       TEXT,              -- resumen para el ciudadano, generado al procesar
-    subido_en     TEXT NOT NULL DEFAULT (datetime('now'))
+    estatus           TEXT NOT NULL DEFAULT 'pendiente'
+                      CHECK (estatus IN ('pendiente', 'procesando', 'listo', 'error')),
+    error             TEXT,              -- mensaje si estatus = 'error'
+    resumen           TEXT,              -- resumen para el ciudadano, generado al procesar
+    subido_en         TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Texto de cada página: es la unidad que se cita ("documento X, página N").

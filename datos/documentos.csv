@@ -1,15 +1,8 @@
-archivo,estado,municipio,seccion,titulo,anio
-informe-extendido-guanajuato.pdf,Guanajuato,,obras,Informe Extendido: Proyectos Localizables en Guanajuato (SHCP y SFIA GTO),2025
-presupuesto-aguascalientes-2026.pdf,Aguascalientes,,presupuesto,Presupuesto de Egresos del Estado de Aguascalientes 2026,2026
-informe-extendido-aguascalientes.pdf,Aguascalientes,,obras,Informe Extendido: Proyectos Localizables en Aguascalientes (SHCP),2025
-presupuesto-baja-california-2026.pdf,Baja California,,presupuesto,Presupuesto Ciudadano de Egresos de Baja California 2026,2026
-informe-extendido-baja-california.pdf,Baja California,,obras,Informe Extendido: Proyectos Localizables en Baja California (SHCP),2025
-presupuesto-baja-california-sur-2026.pdf,Baja California Sur,,presupuesto,Presupuesto de Egresos Aprobado Baja California Sur 2026,2026
-informe-extendido-baja-california-sur.pdf,Baja California Sur,,obras,Informe Extendido: Proyectos Localizables en Baja California Sur (SHCP),2025
-presupuesto-campeche-2026.pdf,Campeche,,presupuesto,Ley del Presupuesto de Egresos del Estado de Campeche 2026,2026
-informe-extendido-campeche.pdf,Campeche,,obras,Informe Extendido: Proyectos Localizables en Campeche (SHCP),2025
-presupuesto-chiapas-2026.pdf,Chiapas,,presupuesto,Presupuesto de Egresos del Estado de Chiapas 2026,2026
-informe-extendido-chiapas.pdf,Chiapas,,obras,Informe Extendido: Proyectos Localizables en Chiapas (SHCP),2025
-informe-extendido-chihuahua.pdf,Chihuahua,,obras,Informe Extendido: Proyectos Localizables en Chihuahua (SHCP),2025
-presupuesto-chihuahua-tomo1-2026.pdf,Chihuahua,,presupuesto,Presupuesto de Egresos del Estado de Chihuahua Tomo I 2026,2026
-presupuesto-chihuahua-tomo2-2026.pdf,Chihuahua,,presupuesto,Presupuesto de Egresos del Estado de Chihuahua Tomo II 2026,2026
+archivo,estado,municipio,seccion,titulo,anio,url_fuente,formato,sha256,fecha_publicacion,dependencia
+peeg_a_2025.xlsx,Guanajuato,,presupuesto,Presupuesto General de Egresos del Estado de Guanajuato 2025 (Analítico),2025,https://presupuestoabierto.guanajuato.gob.mx/datos-abiertos,xlsx,32b012e2dd5e1415f8f552a053b203c5e944b7a300a3cb5c758f561d426a3d4f,2024-12-27,Secretaría de Finanzas Inversión y Administración de Guanajuato
+cuenta_publica-a-2025.xlsx,Guanajuato,,informes,Cuenta Pública del Estado de Guanajuato 2025 (Analítico de Egresos),2025,https://presupuestoabierto.guanajuato.gob.mx/datos-abiertos,xlsx,1371b5c8c349a00b43f3f787106097fc8105ff01a55d547f906bbe4ad81e133c,2025-01-30,Secretaría de Finanzas Inversión y Administración de Guanajuato
+presupuesto-baja-california-2026.pdf,Baja California,,presupuesto,Presupuesto de Egresos del Estado de Baja California para el Ejercicio Fiscal 2026,2026,https://periodicooficial.bajacalifornia.gob.mx,pdf,2af75436175f022adf613fe7dea7cd0b34c9289ca9b85ccfa6c3b396f2a6d687,2025-12-23,Secretaría de Hacienda del Estado de Baja California
+presupuesto-chiapas-2026.pdf,Chiapas,,presupuesto,Presupuesto de Egresos del Estado de Chiapas para el Ejercicio Fiscal 2026 (Decreto 038),2026,https://www.haciendachiapas.gob.mx,pdf,87cfa63dfdcf99d1d1b51c28dbd823d3cfc99b0cee2f4d0d0f62062d6b28e3bf,2025-12-10,Secretaría de Hacienda del Estado de Chiapas
+presupuesto-aguascalientes-2026.pdf,Aguascalientes,,presupuesto,Presupuesto de Egresos del Estado de Aguascalientes para el Ejercicio Fiscal 2026 (Decreto 1400),2026,https://eservicios2.aguascalientes.gob.mx/periodicooficial/,pdf,95e9231370552d13fcdb5b774206f54dfe769be519d2a4b9a8eb5cbb0723b5d1,2025-12-31,Secretaría de Finanzas del Estado de Aguascalientes (SEFI)
+presupuesto-campeche-2026.pdf,Campeche,,presupuesto,Ley de Presupuesto de Egresos del Estado de Campeche para el Ejercicio Fiscal de 2026,2026,https://finanzas.campeche.gob.mx,pdf,05cf5a44a31bca4b9f73e58e937b659a824c9119d1916dd77672e781925b3657,2025-12-23,Secretaría de Administración y Finanzas del Estado de Campeche (SEFIN)
+presupuesto-baja-california-sur-2026.pdf,Baja California Sur,,presupuesto,Presupuesto de Egresos Aprobado Baja California Sur 2026 (Scan / Requiere OCR),2026,https://secfin.bcs.gob.mx,pdf,d99e96b1316c7de4aba95efd895598e796eeb22df363cafa4944a338ad84708d,2025-12-31,Secretaría de Finanzas y Administración de Baja California Sur
