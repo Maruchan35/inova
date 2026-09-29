@@ -1,0 +1,20 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2937;
+  background: #f8fafc;
+}
+body { margin: 0; }
+main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+header h1 { margin-bottom: 4px; color: #1e3a8a; }
+section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
+.buscador { display: flex; gap: 8px; }
+.buscador input { flex: 1; padding: 8px; font-size: 1rem; }
+button { padding: 8px 12px; cursor: pointer; }
+.enlace { background: none; border: none; padding: 0; color: #1d4ed8; text-decoration: underline; font-weight: 600; }
+.cita { border-left: 3px solid #1d4ed8; padding-left: 12px; margin: 12px 0; }
+mark { background: #fde68a; }
+.error { color: #b91c1c; }
+.barra-fila { margin: 10px 0; }
+.barra { background: #e5e7eb; border-radius: 4px; }
+.barra div { background: #1d4ed8; color: #fff; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.pagina { border-color: #1d4ed8; }

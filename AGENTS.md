@@ -12,14 +12,30 @@ antes de actuar.
 - Varias IAs distintas trabajan en paralelo en este repo. Tu trabajo tiene que integrarse con el de
   otras personas sin romperlo.
 
-## Proyecto (se llena en la hora 0, cuando se anuncie el reto)
+## Proyecto
 
-- **Reto:** _pendiente_
-- **Qué construimos:** _pendiente_
-- **Stack:** frontend: _pendiente_ · backend: _pendiente_ · datos: _pendiente_
-- **Cómo se ejecuta:** _pendiente_ (comando exacto)
-- **Cómo se verifica que funciona:** _pendiente_ (comando exacto: tests, build o arranque)
-- **Contrato entre bloques:** ver `docs/api.md`
+- **Reto:** Hackatón TecNM, Ciberdemocracia — Propuesta 3: **CabildoAbierto AI** (ver
+  `docs/requisitos.md`).
+- **Qué construimos:** una página que consulta actas de cabildo guardadas en la base de datos:
+  preguntas en lenguaje natural con cita exacta de acta y página, y un indicador de concentración
+  de compras por proveedor. **Toda la información que muestra la página sale de la base de datos**
+  a través del backend; nada de datos fijos en el frontend.
+- **Stack:** datos: SQLite + FTS5 (`datos/`) · backend: Python 3.13 + FastAPI (`backend/`) ·
+  frontend: React 19 + Vite (`frontend/`).
+- **Responsables:** datos: Marko · backend: Jorge · frontend: Alisson.
+- **Cómo se ejecuta** (tres terminales, desde la raíz del repo):
+  1. `python datos/init_db.py` (crea `datos/cabildo.db`; repetir cuando cambie el esquema o los datos)
+  2. `cd backend` → `python -m venv .venv` → `.venv\Scripts\activate` (Windows) o
+     `source .venv/bin/activate` (Mac/Linux) → `pip install -r requirements.txt` →
+     `uvicorn app.main:app --reload --port 8000`
+  3. `cd frontend` → `npm install` → `npm run dev` → abrir http://localhost:5173
+- **Cómo se verifica que funciona:**
+  - datos: `python datos/init_db.py` termina sin errores
+  - backend: `cd backend` → `pytest` (todos pasan)
+  - frontend: `cd frontend` → `npm run build` sin errores, y la página muestra datos con el backend
+    encendido
+- **Contrato entre bloques:** ver `docs/api.md`. El frontend solo llama al backend a través de
+  `frontend/src/api.js`; el backend solo lee la base de datos a través de `backend/app/db.py`.
 
 ## Reglas de Git (OBLIGATORIAS)
 

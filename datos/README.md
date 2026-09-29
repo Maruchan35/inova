@@ -1,3 +1,4 @@
-# datos
+# datos — Marko
 
-Código del bloque datos. Responsable: _nombre_.
+Base de datos SQLite. `python datos/init_db.py` la crea desde `schema.sql` + `seed.sql`.
+El archivo `cabildo.db` no se sube a Git: cada quien lo genera. Tareas en `notas/datos.md`.
