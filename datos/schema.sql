@@ -130,3 +130,16 @@ CREATE TABLE obras (
 CREATE INDEX idx_obras_municipio ON obras (municipio_id);
 CREATE INDEX idx_obras_alerta ON obras (nivel_alerta);
 
+-- Caché permanente de respuestas de IA para consultas ciudadanas frecuentes
+CREATE TABLE respuestas (
+    id         INTEGER PRIMARY KEY,
+    clave      TEXT NOT NULL UNIQUE,   -- clave hash de [pregunta_normalizada, filtros, huella]
+    pregunta   TEXT NOT NULL,
+    respuesta  TEXT NOT NULL,
+    citas_json TEXT,                   -- JSON con las citas exactas asociadas
+    creado_en  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_respuestas_clave ON respuestas (clave);
+
+

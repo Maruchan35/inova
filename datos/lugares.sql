@@ -1,11 +1,17 @@
 -- Catálogo de entidades federativas y municipios para CabildoAbierto AI.
--- Guanajuato (46 municipios completos) y Baja California.
+-- Estados y municipios con documentación oficial cargada.
 
+-- 1. Estados oficiales con documentos en el sistema
 INSERT OR IGNORE INTO estados (id, nombre) VALUES
 (1, 'Guanajuato'),
-(2, 'Baja California');
+(2, 'Baja California'),
+(3, 'Baja California Sur'),
+(4, 'Aguascalientes'),
+(5, 'Campeche'),
+(6, 'Chiapas'),
+(7, 'Chihuahua');
 
--- Municipios de Guanajuato (estado_id = 1)
+-- 2. Municipios de Guanajuato (estado_id = 1, 46 municipios completos)
 INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
 (1, 1, 'Irapuato'),
 (2, 1, 'León'),
@@ -54,7 +60,7 @@ INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
 (45, 1, 'Xichú'),
 (46, 1, 'Yuriria');
 
--- Municipios principales de Baja California (estado_id = 2)
+-- 3. Municipios de Baja California (estado_id = 2)
 INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
 (101, 2, 'Mexicali'),
 (102, 2, 'Tijuana'),
@@ -63,3 +69,45 @@ INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
 (105, 2, 'Playas de Rosarito'),
 (106, 2, 'San Quintín'),
 (107, 2, 'San Felipe');
+
+-- 4. Municipios de Baja California Sur (estado_id = 3)
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
+(201, 3, 'La Paz'),
+(202, 3, 'Los Cabos'),
+(203, 3, 'Comondú'),
+(204, 3, 'Loreto'),
+(205, 3, 'Mulegé');
+
+-- 5. Municipios de Aguascalientes (estado_id = 4)
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
+(301, 4, 'Aguascalientes'),
+(302, 4, 'Jesús María'),
+(303, 4, 'Calvillo'),
+(304, 4, 'Rincón de Romos'),
+(305, 4, 'Pabellón de Arteaga');
+
+-- 6. Municipios de Campeche (estado_id = 5)
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
+(401, 5, 'Campeche'),
+(402, 5, 'Carmen'),
+(403, 5, 'Champotón'),
+(404, 5, 'Calkiní'),
+(405, 5, 'Escárcega');
+
+-- 7. Municipios de Chiapas (estado_id = 6)
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
+(501, 6, 'Tuxtla Gutiérrez'),
+(502, 6, 'Tapachula'),
+(503, 6, 'San Cristóbal de las Casas'),
+(504, 6, 'Comitán de Domínguez'),
+(505, 6, 'Palenque'),
+(506, 6, 'Chiapa de Corzo');
+
+-- 8. Municipios de Chihuahua (estado_id = 7)
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
+(601, 7, 'Chihuahua'),
+(602, 7, 'Juárez'),
+(603, 7, 'Cuauhtémoc'),
+(604, 7, 'Delicias'),
+(605, 7, 'Hidalgo del Parral'),
+(606, 7, 'Camargo');

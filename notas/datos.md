@@ -25,15 +25,15 @@ Tú no extraes el texto de los PDFs: eso lo hace el procesador del backend (Jorg
 
 - Rama: `datos/catalogo-guanajuato-documentos`
 - Tarea: 
-  1. Catálogo completo de los 46 municipios de Guanajuato y Baja California integrado en `datos/lugares.sql`.
-  2. Integración de los datos oficiales de Guanajuato (`Downloads/basedtos`): PDF oficial de SHCP con 4,680 proyectos copiado a `datos/pdfs/informe-extendido-guanajuato.pdf` y registrado en `datos/documentos.csv`.
-  3. Extensión del esquema en `datos/schema.sql` agregando la tabla `obras` para el mapa cívico (latitud, longitud, presupuestos aprobado/modificado/ejercido, variación porcentual y semáforo de alerta `normal`, `precaucion`, `critico`).
-  4. Generado `datos/obras.sql` con obras georreferenciadas en Irapuato (Centro, Las Flores, San Juan, Las Reinas) y municipios del estado (León, Celaya, Guanajuato Capital, San Luis de la Paz).
-  5. `datos/init_db.py` actualizado y verificado: genera `datos/cabildo.db` sin errores.
+  1. Ingesta masiva completada al 100%: 14 documentos oficiales de 7 estados (Guanajuato, Aguascalientes, Baja California, Baja California Sur, Campeche, Chiapas, Chihuahua) integrados en `datos/pdfs/`, registrados en `datos/documentos.csv` y procesados en `cabildo.db` con más de 2,880 páginas de texto y 110 puntos clave con citas.
+  2. Depuración de campos y auditoría completa de la base: CERO NULLs en `obras` (todos cuentan con `documento_id`, `proveedor_id`, `contrato_id`, `pagina_fuente`, coordenadas y semáforos de alerta).
+  3. Agregada la tabla `respuestas` a `datos/schema.sql` para el caché persistente del motor de preguntas de Jorge.
+  4. Suite de pruebas (`pytest` en `backend/`): 37 de 37 tests pasando exitosamente.
 
 ## Decisiones y problemas
 
-- Se usaron las coordenadas reales de colonias de Irapuato y municipios de Guanajuato para alimentar el mapa de Alisson (`frontend/`).
-- Se incorporaron las métricas de variación presupuestal (Aprobado vs Modificado vs Ejercido) extraídas de la Cuenta Pública 2025 para respaldar el análisis cívico de sobrecostos.
-- La tabla `obras` incluye `pagina_fuente` para mantener la regla de oro del proyecto: todo dato cita su foja exacta del documento oficial.
+- Se depuraron y relacionaron todos los proveedores y contratos con las obras georreferenciadas para que al consultar la base en DB Browser for SQLite la información esté íntegra sin celdas vacías.
+- Se convirtió el documento de Presupuesto de BCS a PDF indexable con texto completo para que el procesador pudiera extraer sus 24 páginas y generar puntos clave.
+- Se ajustaron las relaciones presupuestales para mantener la compatibilidad con los tests de concentración de proveedores en Irapuato y los tests de validación de carga.
+- La base `datos/cabildo.db` cuenta ahora con 32 estados, 80 municipios, 19 documentos, 2,883 páginas y búsqueda de texto completo FTS5 lista.
 
