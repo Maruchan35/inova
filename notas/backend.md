@@ -16,18 +16,27 @@
   - sin IA: 0.3 s;
   - con `deepseek-flash` sin modo pensar: **3 s, $0.002 USD**, 8 puntos, las 23 cifras citadas
     verificadas en su página.
+- **Carga masiva** en `backend/cargar.py` (ver su docstring): lee `datos/documentos.csv`, busca los PDFs
+  en `datos/pdfs/` y procesa cada uno con `procesamiento.procesar()`. Muestra avance, tiempo, tokens y
+  costo total. `--solo-revisar` revisa el CSV sin procesar; `--reprocesar` rehace los que ya están listos.
+  - Estado y municipio por **nombre** (sin importar acentos ni mayúsculas); sección por clave.
+  - Acepta CSV de Excel en español (`;`, cp1252, encabezados con acentos).
+  - Se puede volver a ejecutar: salta los `listo` con el mismo `archivo` (se guarda como
+    `datos/pdfs/<nombre>`) y retoma los que quedaron con error o a medias, sin duplicar.
+  - 4 tests en `tests/test_cargar.py` (26 en total).
 
 ## Tareas (en orden)
 
-1. **Script de carga masiva** que lea `datos/documentos.csv` (de Marko) y procese todos los PDFs.
+1. ~~Script de carga masiva~~ (hecho en `backend/carga-masiva`). Falta probarlo con los PDFs reales
+   de Marko y con la clave de DeepSeek.
 3. **Respuesta con IA en `/api/preguntar`** usando solo las citas encontradas.
 4. Extraer contratos (proveedor, concepto, monto, página) → `proveedores` y `contratos`.
 5. Opcional: OCR para PDFs escaneados.
 
 ## En progreso
 
-- Rama: `backend/procesamiento`
-- Tarea: motor listo y probado con IA real; siguiente: carga masiva
+- Rama: `backend/carga-masiva`
+- Tarea: carga masiva lista y probada sin IA (PDFs sintéticos); pendiente PR a `main`
 
 ## Para retomar en una sesión nueva (léelo primero)
 
@@ -41,12 +50,10 @@
    `python -c "import sqlite3; c=sqlite3.connect('datos/cabildo.db'); c.execute(\"INSERT INTO estados VALUES (2, 'Baja California')\"); c.commit()"`
 4. **Probar el motor:** `cd backend` → `.venv\Scripts\activate` → `uvicorn app.main:app --reload --port 8000`
    → abrir http://127.0.0.1:8000/prueba. PDF de prueba del usuario: `E:\descargas\Presupuesto-Ciudadano-2026.pdf`.
-5. **Siguiente tarea: carga masiva.** Script `backend/cargar.py` que lea `datos/documentos.csv` y procese
-   cada PDF con `procesamiento.procesar()`. Formato propuesto del CSV (confirmarlo con Marko, que lo llena):
-   `archivo,estado,municipio,seccion,titulo,anio` (municipio vacío = documento estatal; `seccion` = clave).
-   Que se pueda volver a ejecutar sin duplicar documentos (por ejemplo, saltar los que ya tengan el mismo
-   `archivo`) y que muestre avance, tiempo y costo total.
-6. Luego: respuesta con IA en `/api/preguntar` (solo con las citas; mismo formato de salida) y extraer
+5. **Carga masiva (hecha):** `cd backend` → `python cargar.py --solo-revisar` y luego `python cargar.py`.
+   Formato del CSV (**confirmarlo con Marko**, que lo llena): `archivo,estado,municipio,seccion,titulo,anio`,
+   con los PDFs en `datos/pdfs/`. Si Marko aún no tiene el CSV: `--csv` y `--pdfs` apuntan a otro lugar.
+6. Siguiente: respuesta con IA en `/api/preguntar` (solo con las citas; mismo formato de salida) y extraer
    contratos a `proveedores`/`contratos`.
 
 Cosas a saber de esta computadora (Windows):
