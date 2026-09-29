@@ -68,9 +68,9 @@ Se han añadido las siguientes columnas a la tabla `documentos` en `datos/schema
 > **Impacto para Jorge:**
 > Al actualizar `backend/cargar.py` y `backend/app/main.py`, se sugiere incluir estos campos al registrar nuevos documentos para que la API (`/api/documentos/{id}`) pueda exponer la procedencia oficial directamente a la interfaz ciudadana de Alisson.
 
-### Nuevas tablas para Alertas Ciudadanas: `suscripciones` y `notificaciones`
-- **`suscripciones`**: Almacena el número telefónico (`telefono`), lugar de interés (`estado_id`, `municipio_id` donde `municipio_id` NULL representa alertas para todo el estado), estado de verificación (`verificado` 0 o 1), marca de tiempo (`fecha`) y un token único de desuscripción (`codigo_baja`). Se protege con `UNIQUE (telefono, estado_id, municipio_id)` para evitar registros idénticos redundantes.
-- **`notificaciones`**: Registro histórico de qué documento (`documento_id`) se envió a qué suscriptor (`suscripcion_id`). Incorpora `UNIQUE (suscripcion_id, documento_id)` para asegurar físicamente a nivel de base de datos que **nunca se envíe el mismo documento dos veces al mismo suscriptor**.
+### Nuevas tablas para Avisos por WhatsApp (acordado con Jorge): `suscripciones` y `notificaciones`
+- **`suscripciones`**: Almacena el número telefónico (`telefono`, formato `52` + 10 dígitos), lugar de interés (`estado_id`, `municipio_id` donde `municipio_id` NULL representa alertas solo estatales), estado de verificación (`verificada`, `activa`), código temporal (`codigo`, `codigo_expira`), token único de baja (`token_baja`) y fecha de alta (`creada_en`). Se protege con el índice único `idx_suscripciones_lugar ON suscripciones (telefono, estado_id, IFNULL(municipio_id, 0))`.
+- **`notificaciones`**: Registro histórico gestionado por el backend para evitar reenvíos. Campos: `suscripcion_id`, `documento_id`, `estatus` ('enviado' | 'prueba' | 'error'), `detalle` y `enviada_en`. Incorpora `UNIQUE (suscripcion_id, documento_id)` para asegurar físicamente a nivel de base de datos que **nunca se envíe el mismo documento dos veces al mismo suscriptor**.
 
 ---
 

@@ -153,35 +153,28 @@ CREATE TABLE respuestas (
 
 CREATE INDEX idx_respuestas_clave ON respuestas (clave);
 
--- Suscripciones de ciudadanos para recibir alertas (WhatsApp/SMS) sobre nuevos documentos.
--- municipio_id NULL = suscrito a nivel estatal.
-CREATE TABLE suscripciones (
-    id           INTEGER PRIMARY KEY,
-    telefono     TEXT NOT NULL,
-    estado_id    INTEGER NOT NULL REFERENCES estados(id),
-    municipio_id INTEGER REFERENCES municipios(id),
-    verificado   INTEGER NOT NULL DEFAULT 0 CHECK (verificado IN (0, 1)),
-    fecha        TEXT NOT NULL DEFAULT (datetime('now')),
-    codigo_baja  TEXT NOT NULL UNIQUE,
-    UNIQUE (telefono, estado_id, municipio_id)
+-- Avisos por WhatsApp (las escribe el backend). Datos personales: nunca pongas números reales en seed.sql.
+CREATE TABLE IF NOT EXISTS suscripciones (
+    id            INTEGER PRIMARY KEY,
+    telefono      TEXT NOT NULL,               -- 52 + 10 dígitos
+    estado_id     INTEGER NOT NULL REFERENCES estados(id),
+    municipio_id  INTEGER REFERENCES municipios(id),  -- NULL = solo documentos estatales
+    verificada    INTEGER NOT NULL DEFAULT 0,
+    activa        INTEGER NOT NULL DEFAULT 1,
+    codigo        TEXT,                        -- código de verificación; se borra al verificar
+    codigo_expira REAL,
+    token_baja    TEXT NOT NULL UNIQUE,
+    creada_en     TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
-CREATE INDEX idx_suscripciones_telefono ON suscripciones (telefono);
-CREATE INDEX idx_suscripciones_lugar ON suscripciones (estado_id, municipio_id);
-CREATE INDEX idx_suscripciones_codigo_baja ON suscripciones (codigo_baja);
-
--- Registro de notificaciones enviadas a cada suscriptor para no repetir documentos.
-CREATE TABLE notificaciones (
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suscripciones_lugar ON suscripciones (telefono, estado_id, IFNULL(municipio_id, 0));
+CREATE TABLE IF NOT EXISTS notificaciones (
     id             INTEGER PRIMARY KEY,
     suscripcion_id INTEGER NOT NULL REFERENCES suscripciones(id) ON DELETE CASCADE,
     documento_id   INTEGER NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
-    fecha          TEXT NOT NULL DEFAULT (datetime('now')),
-    estatus        TEXT NOT NULL DEFAULT 'enviado'
-                   CHECK (estatus IN ('pendiente', 'enviado', 'fallido')),
+    estatus        TEXT NOT NULL,              -- 'enviado' | 'prueba' | 'error'
+    detalle        TEXT,
+    enviada_en     TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (suscripcion_id, documento_id)
 );
-
-CREATE INDEX idx_notificaciones_suscripcion ON notificaciones (suscripcion_id);
-CREATE INDEX idx_notificaciones_documento ON notificaciones (documento_id);
 
 
