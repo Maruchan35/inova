@@ -7,6 +7,7 @@
   - Tabla `documentos` enriquecida con metadatos oficiales de auditoría y procedencia: `url_fuente`, `formato`, `sha256`, `fecha_publicacion`, `dependencia`.
   - Tabla `obras` reservada en el esquema para vincular obras georreferenciadas con auditoría presupuestal real.
   - Tabla `respuestas` agregada para el caché persistente de preguntas ciudadanas del backend.
+  - Tablas `suscripciones` y `notificaciones` añadidas para el sistema de alertas ciudadanas por WhatsApp/SMS con control estricto antiduplicados (`UNIQUE(suscripcion_id, documento_id)`).
 - **Catálogo de lugares (`datos/lugares.sql`):**
   - Creado con los 32 estados y los 2,475 municipios de México con coordenadas oficiales de cabeceras municipales.
   - Conserva estrictamente los IDs canónicos preexistentes para compatibilidad total con el backend y tests:
@@ -66,6 +67,10 @@ Se han añadido las siguientes columnas a la tabla `documentos` en `datos/schema
 > [!NOTE]
 > **Impacto para Jorge:**
 > Al actualizar `backend/cargar.py` y `backend/app/main.py`, se sugiere incluir estos campos al registrar nuevos documentos para que la API (`/api/documentos/{id}`) pueda exponer la procedencia oficial directamente a la interfaz ciudadana de Alisson.
+
+### Nuevas tablas para Alertas Ciudadanas: `suscripciones` y `notificaciones`
+- **`suscripciones`**: Almacena el número telefónico (`telefono`), lugar de interés (`estado_id`, `municipio_id` donde `municipio_id` NULL representa alertas para todo el estado), estado de verificación (`verificado` 0 o 1), marca de tiempo (`fecha`) y un token único de desuscripción (`codigo_baja`). Se protege con `UNIQUE (telefono, estado_id, municipio_id)` para evitar registros idénticos redundantes.
+- **`notificaciones`**: Registro histórico de qué documento (`documento_id`) se envió a qué suscriptor (`suscripcion_id`). Incorpora `UNIQUE (suscripcion_id, documento_id)` para asegurar físicamente a nivel de base de datos que **nunca se envíe el mismo documento dos veces al mismo suscriptor**.
 
 ---
 

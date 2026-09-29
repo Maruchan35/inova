@@ -111,7 +111,12 @@ Monto por proveedor, de mayor a menor. Filtros opcionales `estado_id` y `municip
 | `puntos_clave` | `id`, `documento_id`, `orden`, `texto`, `pagina` | "Lo más importante", con su página |
 | `proveedores` | `id`, `nombre`, `rfc` | |
 | `contratos` | `id`, `documento_id`, `pagina`, `proveedor_id`, `concepto`, `monto`, `fecha` | |
+| `obras` | `id`, `municipio_id`, `titulo`, `categoria`, `latitud`, `longitud`, `presupuesto_aprobado`, `presupuesto_ejercido`, `nivel_alerta`, `anio` | Obras georreferenciadas |
+| `respuestas` | `id`, `clave`, `pregunta`, `respuesta`, `citas_json`, `creado_en` | Caché persistente para IA |
+| `suscripciones` | `id`, `telefono`, `estado_id`, `municipio_id`, `verificado`, `fecha`, `codigo_baja` | Alertas WhatsApp/SMS para ciudadanos (`municipio_id` NULL = estatal) |
+| `notificaciones` | `id`, `suscripcion_id`, `documento_id`, `fecha`, `estatus` | Historial de envíos; previene duplicados (UNIQUE suscripcion + doc) |
 
 **Quién escribe qué:** el bloque datos define las tablas y carga estados, municipios, secciones y
 datos de ejemplo. El procesador del backend llena `documentos` (estatus, resumen, total_paginas),
-`paginas`, `puntos_clave`, `proveedores` y `contratos` al procesar cada PDF.
+`paginas`, `puntos_clave`, `proveedores` y `contratos` al procesar cada PDF. Las suscripciones y
+notificaciones son gestionadas por los endpoints de alertas ciudadanas.
