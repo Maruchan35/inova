@@ -23,9 +23,12 @@
 
 ## En progreso
 
-- Rama:
-- Tarea:
+- Rama: `frontend/diseno`
+- Tarea: Mover el diseño a React e integrarlo con `api.js`.
 
 ## Decisiones y problemas
 
--
+- El diseño de la portada, ranking, lugares y documentos se movió a componentes React en `frontend/src/components/`.
+- Se removió completamente el mapa estático ya que no había datos de obras geolocalizados, alineándose con la guía de evitar dependencias extra si no era funcional.
+- El Chatbot fue integrado exitosamente usando `api.preguntar()`.
+- Falta: Formulario para subir documentos y la gráfica de concentración visual con porcentaje de riesgo.
