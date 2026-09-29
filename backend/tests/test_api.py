@@ -81,3 +81,8 @@ def test_concentracion(cliente):
     assert filas[0]["nombre"].startswith("Constructora Horizonte")
     assert round(sum(f["porcentaje"] for f in filas)) == 100
     assert cliente.get("/api/proveedores/concentracion", params={"municipio_id": 2}).json() == []
+
+
+def test_vista_previa(cliente):
+    r = cliente.get("/vista")
+    assert r.status_code == 200 and "CabildoAbierto" in r.text

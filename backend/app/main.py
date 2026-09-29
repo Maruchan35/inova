@@ -313,3 +313,9 @@ def bitacora_documento(documento_id: int):
 @app.get("/prueba", response_class=HTMLResponse)
 def pagina_prueba():
     return (Path(__file__).parent / "prueba.html").read_text(encoding="utf-8")
+
+
+@app.get("/vista", response_class=HTMLResponse)
+def vista_previa():
+    """Vista previa provisional del lado del ciudadano, con los datos reales de la API."""
+    return (Path(__file__).parent / "vista.html").read_text(encoding="utf-8")

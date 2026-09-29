@@ -16,6 +16,10 @@
   - sin IA: 0.3 s;
   - con `deepseek-flash` sin modo pensar: **3 s, $0.002 USD**, 8 puntos, las 23 cifras citadas
     verificadas en su página.
+- **Vista previa ciudadana (provisional):** http://127.0.0.1:8000/vista (`backend/app/vista.html`, no es parte
+  del contrato ni reemplaza el frontend de Alisson). Inicio con buscador de lugar, página de lugar con
+  secciones, preguntas y concentración de proveedores, página de documento con resumen, puntos clave y
+  visor de páginas. Todo sale de la API.
 - **Carga masiva** en `backend/cargar.py` (ver su docstring): lee `datos/documentos.csv`, busca los PDFs
   en `datos/pdfs/` y procesa cada uno con `procesamiento.procesar()`. Muestra avance, tiempo, tokens y
   costo total. `--solo-revisar` revisa el CSV sin procesar; `--reprocesar` rehace los que ya están listos.
@@ -23,7 +27,7 @@
   - Acepta CSV de Excel en español (`;`, cp1252, encabezados con acentos).
   - Se puede volver a ejecutar: salta los `listo` con el mismo `archivo` (se guarda como
     `datos/pdfs/<nombre>`) y retoma los que quedaron con error o a medias, sin duplicar.
-  - 4 tests en `tests/test_cargar.py` (26 en total).
+  - 4 tests en `tests/test_cargar.py` (27 en total, con el de `/vista`).
 
 ## Tareas (en orden)
 
