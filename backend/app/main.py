@@ -1,12 +1,13 @@
+import os
 import sqlite3
 from pathlib import Path
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from . import config, preguntas, procesamiento
+from . import config, notificaciones, preguntas, procesamiento
 from .busqueda import buscar_fragmentos, filtros_sql
 from .db import abrir, conectar
 from .procesamiento import llm
@@ -246,6 +247,59 @@ async def subir_documento(
     return {"id": documento_id, "estatus": "pendiente"}
 
 
+# --- Avisos por WhatsApp ---
+
+
+class Suscripcion(BaseModel):
+    telefono: str
+    estado_id: int
+    municipio_id: int | None = None
+
+
+class Verificacion(BaseModel):
+    telefono: str
+    codigo: str
+
+
+class Baja(BaseModel):
+    telefono: str | None = None
+    token: str | None = None
+
+
+def _aviso(funcion, *args):
+    try:
+        return funcion(*args)
+    except notificaciones.ErrorAviso as e:
+        raise HTTPException(status_code=e.estatus, detail=str(e))
+
+
+@app.post("/api/suscripciones", status_code=202)
+def suscribirse(datos: Suscripcion, con: Con = Depends(conectar)):
+    """Manda un código por WhatsApp para confirmar que el número es de quien se suscribe."""
+    return _aviso(notificaciones.suscribir, con, datos.telefono, datos.estado_id, datos.municipio_id)
+
+
+@app.post("/api/suscripciones/verificar")
+def verificar_suscripcion(datos: Verificacion, con: Con = Depends(conectar)):
+    return _aviso(notificaciones.verificar, con, datos.telefono, datos.codigo)
+
+
+@app.post("/api/suscripciones/baja")
+def baja_suscripcion(datos: Baja, con: Con = Depends(conectar)):
+    if not datos.token:
+        raise HTTPException(status_code=400, detail="Falta el token de baja")
+    return {"bajas": _aviso(notificaciones.baja_por_token, con, datos.token)}
+
+
+@app.post("/api/interno/baja")
+def baja_desde_whatsapp(datos: Baja, x_bot_token: str = Header(""), con: Con = Depends(conectar)):
+    """La llama el bot de WhatsApp cuando alguien responde BAJA. Protegida con WHATSAPP_BOT_TOKEN."""
+    esperado = os.environ.get("WHATSAPP_BOT_TOKEN", "")
+    if not esperado or x_bot_token != esperado:
+        raise HTTPException(status_code=403, detail="Token inválido")
+    return {"bajas": _aviso(notificaciones.baja_por_telefono, con, datos.telefono or "")}
+
+
 # --- Página de prueba del motor (solo para desarrollo; no es parte del contrato) ---
 
 
@@ -263,6 +317,12 @@ def bitacora_documento(documento_id: int):
 def bitacora_preguntas():
     """Últimas preguntas: de dónde salió la respuesta (caché propio, DeepSeek o respaldo), tiempo y costo."""
     return list(preguntas.BITACORA)
+
+
+@app.get("/api/prueba/avisos")
+def bitacora_avisos():
+    """Últimos mensajes de WhatsApp (enviados o, sin bot, solo de prueba)."""
+    return list(notificaciones.BITACORA)
 
 
 @app.get("/prueba", response_class=HTMLResponse)
