@@ -28,7 +28,7 @@ export default function Documento({ id, onVerPagina }) {
     <>
       <div className="doc-detail-header" style={{ marginTop: '2rem' }}>
         <p className="tenue" style={{ marginBottom: '10px' }}>
-          {doc.seccion.nombre} Â· {doc.municipio?.nombre ?? doc.estado.nombre} Â· {doc.anio}
+          {doc.seccion.nombre} · {doc.municipio?.nombre ?? doc.estado.nombre} · {doc.anio}
         </p>
         <h2>{doc.titulo}</h2>
       </div>
@@ -37,7 +37,7 @@ export default function Documento({ id, onVerPagina }) {
         <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', textAlign: 'center' }}>
           <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: 'var(--royal-blue)', marginBottom: '1rem' }}></i>
           <p style={{ fontSize: '1.2rem', color: 'var(--royal-blue)' }}>Procesando documento...</p>
-          <p className="tenue">La IA estÃ¡ analizando y extrayendo los datos importantes ({doc.estatus}).</p>
+          <p className="tenue">La IA está analizando y extrayendo los datos importantes ({doc.estatus}).</p>
         </div>
       ) : (
         <>
@@ -46,14 +46,14 @@ export default function Documento({ id, onVerPagina }) {
             {doc.resumen}
           </div>
 
-          <h3 style={{ color: 'var(--royal-blue)', marginBottom: '1rem', fontSize: '1.5rem' }}>Lo mÃ¡s importante</h3>
+          <h3 style={{ color: 'var(--royal-blue)', marginBottom: '1rem', fontSize: '1.5rem' }}>Lo más importante</h3>
           <ul className="doc-puntos">
             {doc.puntos_clave.map((p, i) => (
               <li key={i}>
                 <span style={{ paddingRight: '1rem', lineHeight: '1.5' }}>{p.texto}</span>
                 {p.pagina && (
                   <button onClick={() => onVerPagina(doc.id, p.pagina)}>
-                    pÃ¡g. {p.pagina}
+                    pág. {p.pagina}
                   </button>
                 )}
               </li>

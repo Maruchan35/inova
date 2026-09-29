@@ -15,9 +15,9 @@ export default function Concentracion({ filtros, locationName }) {
   return (
     <div className="ranking-section" style={{ marginTop: '4rem' }}>
       <div className="ranking-header">
-        <h2>Â¿A quiÃ©n se le paga mÃ¡s en <span className="highlight-location">{locationName}</span>?</h2>
+        <h2>¿A quién se le paga más en <span className="highlight-location">{locationName}</span>?</h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '10px', fontSize: '1.1rem' }}>
-          Proveedores con mayor concentraciÃ³n de compras y contratos.
+          Proveedores con mayor concentración de compras y contratos.
         </p>
       </div>
 

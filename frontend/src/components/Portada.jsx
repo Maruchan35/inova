@@ -50,8 +50,8 @@ export default function Portada({ onElegir }) {
       <section className="hero">
         <h1>Transparencia Inteligente para Todos</h1>
         <div className="hero-description">
-          <p>En MÃ©xico existe informaciÃ³n pÃºblica sobre presupuestos, contratos, proveedores y obras, pero suele estar dispersa en diferentes portales y documentos extensos, lo que dificulta su consulta y comprensiÃ³n por parte de la ciudadanÃ­a.</p>
-          <p><span className="brand-highlight">CabildoAbierto</span> busca solucionar esta barrera mediante inteligencia artificial y RAG, permitiendo realizar preguntas en lenguaje natural y obtener respuestas claras junto con su fuente y pÃ¡gina correspondiente. AsÃ­, la informaciÃ³n pÃºblica se vuelve mÃ¡s accesible, verificable y Ãºtil para la participaciÃ³n ciudadana.</p>
+          <p>En México existe información pública sobre presupuestos, contratos, proveedores y obras, pero suele estar dispersa en diferentes portales y documentos extensos, lo que dificulta su consulta y comprensión por parte de la ciudadanía.</p>
+          <p><span className="brand-highlight">CabildoAbierto</span> busca solucionar esta barrera mediante inteligencia artificial y RAG, permitiendo realizar preguntas en lenguaje natural y obtener respuestas claras junto con su fuente y página correspondiente. Así, la información pública se vuelve más accesible, verificable y útil para la participación ciudadana.</p>
         </div>
       </section>
 

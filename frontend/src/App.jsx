@@ -28,7 +28,7 @@ export default function App() {
             {(lugar || documentoId) && (
               <li>
                 <button className="btn-link" style={{ fontWeight: 700 }} onClick={() => (documentoId ? setDocumentoId(null) : setLugar(null))}>
-                  <i className="fa-solid fa-arrow-left"></i> Volver atrÃ¡s
+                  <i className="fa-solid fa-arrow-left"></i> Volver atrás
                 </button>
               </li>
             )}

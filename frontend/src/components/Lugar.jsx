@@ -11,7 +11,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
     pedir(lugar.id).then(setDatos).catch(() => setDatos(null));
   }, [lugar.tipo, lugar.id]);
   
-  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando informaciÃ³n...</div>;
+  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
 
   const filtros = lugar.tipo === 'estado' ? { estado_id: datos.id } : { municipio_id: datos.id };
   const locationName = datos.nombre + (datos.estado ? `, ${datos.estado.nombre}` : '');
@@ -41,7 +41,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
               <i className={iconForSection(s.clave)} style={{ color: 'var(--platinum)' }}></i>
             </h3>
             {s.documentos.length === 0 ? (
-              <p className="tenue" style={{ marginTop: '10px' }}>Sin documentos todavÃ­a.</p>
+              <p className="tenue" style={{ marginTop: '10px' }}>Sin documentos todavía.</p>
             ) : (
               <ul className="document-list" style={{ marginTop: '1rem' }}>
                 {s.documentos.map((d) => (
