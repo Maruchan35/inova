@@ -1,22 +1,25 @@
 # Notas — datos (Marko)
 
-## Estado
+## Estado (contrato v2)
 
-- Esquema en `datos/schema.sql`: actas, páginas (con índice de búsqueda), proveedores, contratos.
-- `datos/seed.sql` tiene datos **ficticios** de ejemplo; `python datos/init_db.py` crea `datos/cabildo.db`.
+- Esquema en `datos/schema.sql`: estados → municipios, secciones (5 fijas), documentos (con estatus
+  de procesamiento y resumen), páginas (con índice de búsqueda), puntos clave, proveedores y contratos.
+- `datos/seed.sql` tiene datos **ficticios** de ejemplo (Guanajuato, Irapuato, León, Celaya); los
+  títulos llevan "(ejemplo)". `python datos/init_db.py` crea `datos/cabildo.db`.
+- Detalle de cada tabla y quién la llena: `docs/api.md`, sección "Modelo de datos".
 
 ## Tareas (en orden)
 
-1. **Conseguir 5 actas reales de cabildo** en PDF (portal de transparencia del municipio). Guardarlas en
-   `datos/pdfs/`.
-2. **Script de ingesta** `datos/ingesta.py`: leer cada PDF página por página (librería `pypdf`) e insertar
-   en `actas` y `paginas`. La búsqueda funciona sola gracias a los triggers.
-3. **Contratos:** extraer de las actas proveedor, concepto, monto y página → tablas `proveedores` y
-   `contratos`. Puede ser manual al principio (un `datos/contratos.sql`).
-4. Cuando las actas reales estén cargadas, dejar de usar `seed.sql` (o dejarlo solo para tests).
-5. Opcional: OCR para PDFs escaneados.
+1. **Revisar el esquema v2** y proponer ajustes por PR si falta algo (avisar a Jorge: el backend lo lee).
+2. **Conseguir 5-10 PDFs reales** de Guanajuato e Irapuato, al menos uno por sección: informe de
+   gobierno, presupuesto de egresos, programa de obra pública, actas de cabildo, contratos o
+   licitaciones (portales de transparencia). Guardarlos en `datos/pdfs/` con un nombre claro.
+3. **Catálogo de lugares:** cargar todos los municipios de Guanajuato (46) en un `datos/lugares.sql`.
+4. **Lista de documentos a cargar** (`datos/documentos.csv`: archivo, estado, municipio, sección,
+   título, año) para que el procesador de Jorge los cargue todos de una vez.
+5. Cuando los reales estén cargados, dejar `seed.sql` solo para los tests.
 
-Si necesitas cambiar tablas o columnas, avisa a Jorge: el backend las lee y está en `docs/api.md`.
+Tú no extraes el texto de los PDFs: eso lo hace el procesador del backend (Jorge).
 
 ## En progreso
 

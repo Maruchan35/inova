@@ -16,10 +16,12 @@ antes de actuar.
 
 - **Reto:** Hackatón TecNM, Ciberdemocracia — Propuesta 3: **CabildoAbierto AI** (ver
   `docs/requisitos.md`).
-- **Qué construimos:** una página que consulta actas de cabildo guardadas en la base de datos:
-  preguntas en lenguaje natural con cita exacta de acta y página, y un indicador de concentración
-  de compras por proveedor. **Toda la información que muestra la página sale de la base de datos**
-  a través del backend; nada de datos fijos en el frontend.
+- **Qué construimos:** una plataforma donde los gobiernos suben sus documentos (informes,
+  presupuestos, obras, actas, contratos: PDFs de cientos de páginas) y la plataforma los **procesa
+  una sola vez** para que el ciudadano los entienda: elige su estado o municipio, ve los documentos
+  por sección, lee un resumen con "lo más importante" y puede buscar o preguntar. **Todo dato lleva
+  la página de donde sale.** Toda la información que muestra la página sale de la base de datos a
+  través del backend; nada de datos fijos en el frontend.
 - **Stack:** datos: SQLite + FTS5 (`datos/`) · backend: Python 3.13 + FastAPI (`backend/`) ·
   frontend: React 19 + Vite (`frontend/`).
 - **Responsables:** datos: Marko · backend: Jorge · frontend: Alisson.

@@ -1,23 +1,56 @@
--- Esquema de CabildoAbierto AI (SQLite).
+-- Esquema de CabildoAbierto AI v2 (SQLite).
+-- Documentos de gobierno organizados por estado → municipio → sección.
 -- Responsable: bloque datos. Los cambios que afecten al backend se acuerdan en docs/api.md.
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE actas (
-    id        INTEGER PRIMARY KEY,
-    titulo    TEXT NOT NULL,
-    fecha     TEXT,               -- ISO 8601: AAAA-MM-DD
-    municipio TEXT,
-    archivo   TEXT                -- nombre del PDF original
+CREATE TABLE estados (
+    id     INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL UNIQUE
 );
 
--- Texto de cada página: es la unidad que se cita ("acta X, página N").
+CREATE TABLE municipios (
+    id        INTEGER PRIMARY KEY,
+    estado_id INTEGER NOT NULL REFERENCES estados(id),
+    nombre    TEXT NOT NULL,
+    UNIQUE (estado_id, nombre)
+);
+
+-- Lista fija de secciones; el frontend las muestra en este orden.
+CREATE TABLE secciones (
+    id     INTEGER PRIMARY KEY,
+    clave  TEXT NOT NULL UNIQUE,   -- identificador para URLs y filtros: 'presupuesto'
+    nombre TEXT NOT NULL,
+    orden  INTEGER NOT NULL
+);
+
+-- Un documento es un PDF subido por un gobierno.
+-- municipio_id NULL = documento del gobierno estatal.
+CREATE TABLE documentos (
+    id            INTEGER PRIMARY KEY,
+    estado_id     INTEGER NOT NULL REFERENCES estados(id),
+    municipio_id  INTEGER REFERENCES municipios(id),
+    seccion_id    INTEGER NOT NULL REFERENCES secciones(id),
+    titulo        TEXT NOT NULL,
+    anio          INTEGER,
+    fecha         TEXT,              -- ISO 8601: AAAA-MM-DD
+    archivo       TEXT,              -- ruta del PDF original
+    total_paginas INTEGER NOT NULL DEFAULT 0,
+    -- Procesamiento (bloque backend): pendiente → procesando → listo | error
+    estatus       TEXT NOT NULL DEFAULT 'pendiente'
+                  CHECK (estatus IN ('pendiente', 'procesando', 'listo', 'error')),
+    error         TEXT,              -- mensaje si estatus = 'error'
+    resumen       TEXT,              -- resumen para el ciudadano, generado al procesar
+    subido_en     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Texto de cada página: es la unidad que se cita ("documento X, página N").
 CREATE TABLE paginas (
-    id      INTEGER PRIMARY KEY,
-    acta_id INTEGER NOT NULL REFERENCES actas(id) ON DELETE CASCADE,
-    numero  INTEGER NOT NULL,
-    texto   TEXT NOT NULL,
-    UNIQUE (acta_id, numero)
+    id           INTEGER PRIMARY KEY,
+    documento_id INTEGER NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    numero       INTEGER NOT NULL,
+    texto        TEXT NOT NULL,
+    UNIQUE (documento_id, numero)
 );
 
 -- Índice de búsqueda de texto completo, sin acentos ni mayúsculas.
@@ -39,6 +72,15 @@ CREATE TRIGGER paginas_au AFTER UPDATE ON paginas BEGIN
     INSERT INTO paginas_fts(rowid, texto) VALUES (new.id, new.texto);
 END;
 
+-- "Lo más importante" de cada documento, generado al procesar. Siempre con su página.
+CREATE TABLE puntos_clave (
+    id           INTEGER PRIMARY KEY,
+    documento_id INTEGER NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    orden        INTEGER NOT NULL,
+    texto        TEXT NOT NULL,
+    pagina       INTEGER
+);
+
 CREATE TABLE proveedores (
     id     INTEGER PRIMARY KEY,
     nombre TEXT NOT NULL UNIQUE,
@@ -47,10 +89,13 @@ CREATE TABLE proveedores (
 
 CREATE TABLE contratos (
     id           INTEGER PRIMARY KEY,
-    acta_id      INTEGER REFERENCES actas(id) ON DELETE SET NULL,
-    pagina       INTEGER,         -- página del acta donde se aprobó
+    documento_id INTEGER REFERENCES documentos(id) ON DELETE SET NULL,
+    pagina       INTEGER,            -- página del documento donde aparece
     proveedor_id INTEGER NOT NULL REFERENCES proveedores(id),
     concepto     TEXT NOT NULL,
-    monto        REAL NOT NULL,   -- pesos MXN
+    monto        REAL NOT NULL,      -- pesos MXN
     fecha        TEXT
 );
+
+CREATE INDEX idx_documentos_lugar ON documentos (estado_id, municipio_id, seccion_id);
+CREATE INDEX idx_contratos_documento ON contratos (documento_id);

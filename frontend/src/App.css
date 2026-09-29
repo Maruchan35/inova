@@ -18,3 +18,6 @@ mark { background: #fde68a; }
 .barra { background: #e5e7eb; border-radius: 4px; }
 .barra div { background: #1d4ed8; color: #fff; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 .pagina { border-color: #1d4ed8; }
+.ancho { width: 100%; padding: 8px; font-size: 1rem; box-sizing: border-box; }
+.tenue { color: #6b7280; }
+.separado { margin-right: 12px; }
