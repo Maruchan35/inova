@@ -14,6 +14,8 @@ def cliente(tmp_path_factory):
     ruta = tmp_path_factory.mktemp("db") / "test.db"
     subprocess.run([sys.executable, str(RAIZ / "datos" / "init_db.py"), str(ruta)], check=True)
     os.environ["DB_PATH"] = str(ruta)
+    os.environ["SUBIDOS_DIR"] = str(tmp_path_factory.mktemp("subidos"))
+    os.environ["DEEPSEEK_API_KEY"] = ""  # los tests nunca llaman a la IA real
 
     from fastapi.testclient import TestClient
     from app.main import app

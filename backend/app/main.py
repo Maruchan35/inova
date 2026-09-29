@@ -1,11 +1,15 @@
 import re
 import sqlite3
+from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from .db import conectar
+from . import config, procesamiento
+from .db import abrir, conectar
+from .procesamiento import llm
 
 app = FastAPI(title="CabildoAbierto AI")
 
@@ -240,3 +244,72 @@ def concentracion(
     ).fetchall()
     total = sum(f["monto_total"] for f in filas) or 1
     return [{**dict(f), "porcentaje": round(100 * f["monto_total"] / total, 1)} for f in filas]
+
+
+# --- Subida y procesamiento de documentos ---
+
+
+def _procesar_en_segundo_plano(documento_id: int, ruta: Path) -> None:
+    con = abrir()
+    try:
+        procesamiento.procesar(con, documento_id, ruta)
+    finally:
+        con.close()
+
+
+@app.post("/api/documentos", status_code=201)
+async def subir_documento(
+    tareas: BackgroundTasks,
+    archivo: UploadFile = File(...),
+    estado_id: int = Form(...),
+    municipio_id: str = Form(""),  # vacío = documento estatal
+    seccion: str = Form(...),
+    titulo: str = Form(...),
+    anio: str = Form(""),
+    con: Con = Depends(conectar),
+):
+    contenido = await archivo.read()
+    if not contenido.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="El archivo no es un PDF")
+    municipio = int(municipio_id) if municipio_id.strip() else None
+    if not con.execute("SELECT 1 FROM estados WHERE id = ?", (estado_id,)).fetchone():
+        raise HTTPException(status_code=400, detail="Estado no existe")
+    if municipio and not con.execute(
+        "SELECT 1 FROM municipios WHERE id = ? AND estado_id = ?", (municipio, estado_id)
+    ).fetchone():
+        raise HTTPException(status_code=400, detail="El municipio no existe en ese estado")
+    fila_seccion = con.execute("SELECT id FROM secciones WHERE clave = ?", (seccion,)).fetchone()
+    if not fila_seccion:
+        raise HTTPException(status_code=400, detail="Sección no existe")
+
+    cursor = con.execute(
+        "INSERT INTO documentos (estado_id, municipio_id, seccion_id, titulo, anio) VALUES (?, ?, ?, ?, ?)",
+        (estado_id, municipio, fila_seccion["id"], titulo.strip(), int(anio) if anio.strip() else None),
+    )
+    documento_id = cursor.lastrowid
+    config.SUBIDOS_DIR.mkdir(parents=True, exist_ok=True)
+    ruta = config.SUBIDOS_DIR / f"{documento_id}.pdf"
+    ruta.write_bytes(contenido)
+    con.execute("UPDATE documentos SET archivo = ? WHERE id = ?", (str(ruta), documento_id))
+    con.commit()
+
+    tareas.add_task(_procesar_en_segundo_plano, documento_id, ruta)
+    return {"id": documento_id, "estatus": "pendiente"}
+
+
+# --- Página de prueba del motor (solo para desarrollo; no es parte del contrato) ---
+
+
+@app.get("/api/prueba/motor")
+def estado_motor():
+    return {"ia_configurada": llm.configurado(), "modelo": llm.modelo()}
+
+
+@app.get("/api/prueba/documentos/{documento_id}")
+def bitacora_documento(documento_id: int):
+    return procesamiento.BITACORA.get(documento_id) or {}
+
+
+@app.get("/prueba", response_class=HTMLResponse)
+def pagina_prueba():
+    return (Path(__file__).parent / "prueba.html").read_text(encoding="utf-8")
