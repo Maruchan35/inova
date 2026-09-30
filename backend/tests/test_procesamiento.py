@@ -127,3 +127,21 @@ def test_llm_pide_json_sin_modo_pensar(monkeypatch):
     assert uso == {"entrada": 10, "cache": 8, "salida": 5, "llamadas": 1}
     # 2 tokens sin caché + 8 del caché de DeepSeek (50 veces más baratos) + 5 de salida
     assert llm.costo_usd(uso) == pytest.approx((2 * 0.30 + 8 * 0.006 + 5 * 1.20) / 1_000_000)
+
+
+def test_documento_enlaza_a_su_pdf_original_y_su_fuente(cliente):
+    doc_id = subir(cliente).json()["id"]
+    doc = cliente.get(f"/api/documentos/{doc_id}").json()
+    assert doc["pdf_url"] == f"/api/documentos/{doc_id}/pdf"
+    assert set(doc["fuente"]) == {"url_fuente", "formato", "fecha_publicacion", "dependencia"}
+    pdf = cliente.get(doc["pdf_url"])
+    assert pdf.status_code == 200 and pdf.headers["content-type"] == "application/pdf" and pdf.content.startswith(b"%PDF")
+    pagina = cliente.get(f"/api/documentos/{doc_id}/paginas/2").json()
+    assert (pagina["total_paginas"], pagina["pdf_url"]) == (3, f"/api/documentos/{doc_id}/pdf#page=2")
+    assert "archivo" not in pagina  # nunca se muestra la ruta del archivo en el servidor
+
+
+def test_documento_sin_pdf_en_el_servidor(cliente):
+    assert cliente.get("/api/documentos/2").json()["pdf_url"] is None  # datos de ejemplo: no hay PDF
+    assert cliente.get("/api/documentos/2/pdf").status_code == 404
+    assert cliente.get("/api/documentos/2/paginas/1").json()["pdf_url"] is None

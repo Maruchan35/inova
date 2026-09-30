@@ -141,3 +141,18 @@ def test_un_documento_nuevo_en_el_lugar_invalida_la_respuesta_guardada(cliente, 
         con.execute("DELETE FROM documentos WHERE id = ?", (nuevo,))
         con.commit()
         con.close()
+
+
+def test_cada_respuesta_dice_de_donde_salio(cliente, ia):
+    primera = preguntar(cliente, "¿Cuánto recibe seguridad?", documento_id=2)["detalle"]
+    repetida = preguntar(cliente, "¿cuanto recibe seguridad?", documento_id=2)["detalle"]
+    assert (primera["origen"], primera["modo"], repetida["origen"]) == ("ia", "documento completo", "cache")
+    assert primera["costo_usd"] > 0 and repetida["costo_usd"] == 0 and primera["motivo"] is None
+    ia.error = RuntimeError("sin conexión")
+    falla = preguntar(cliente, "¿Cuánto costó el mercado?", municipio_id=1)["detalle"]
+    assert falla["origen"] == "sin_ia" and "no está disponible" in falla["motivo"]
+
+
+def test_sin_clave_de_ia_lo_dice(cliente):
+    detalle = preguntar(cliente, "¿Cuánto costó el mercado?", municipio_id=1)["detalle"]
+    assert detalle["origen"] == "sin_ia" and detalle["motivo"]

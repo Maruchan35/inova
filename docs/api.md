@@ -56,9 +56,15 @@ Detalle con lo que ve el ciudadano. `resumen` es `null` y `puntos_clave` vacío 
   "puntos_clave": [{ "texto": "Presupuesto total 2026: $3,200 millones de pesos.", "pagina": 1 }] }
 ```
 `estatus`: `pendiente` → `procesando` → `listo` | `error` (con mensaje en `error`).
+También trae `fuente` (`url_fuente`, `formato`, `fecha_publicacion`, `dependencia`; pueden ser `null`) y
+`pdf_url`: dirección del PDF original para abrirlo (`null` si no está en el servidor).
+
+#### `GET /api/documentos/{id}/pdf`
+El PDF original, para verificar un dato en su página: `/api/documentos/6/pdf#page=190`. `404` si no está.
 
 #### `GET /api/documentos/{id}/paginas/{numero}`
-Texto completo de una página. `404` si no existe.
+Texto completo de una página, con `total_paginas` del documento y `pdf_url` (el PDF original abierto en
+esa página, o `null`). `404` si no existe.
 ```json
 { "documento_id": 2, "documento_titulo": "Presupuesto de Egresos 2026", "pagina": 1, "texto": "..." }
 ```
@@ -89,8 +95,9 @@ mismo formato que los resultados de `/buscar`.
 ```json
 { "pregunta": "¿Cuánto costó el mercado?", "respuesta": "...", "citas": [ ... ] }
 ```
-Hoy `respuesta` es un texto fijo; el bloque backend la generará con IA a partir de las citas. El
-formato no cambia.
+La respuesta la genera DeepSeek a partir de los documentos (con caché). Además trae `detalle`:
+`{ "origen": "ia" | "cache" | "sin_ia" | "sin_resultados", "segundos": 1.8, "costo_usd": 0.0008, "motivo": null }`
+para mostrar de dónde salió cada respuesta (`motivo` explica cuando no se pudo usar la IA).
 
 ### Avisos por WhatsApp
 
