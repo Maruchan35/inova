@@ -2,21 +2,39 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api.js';
 
 /**
- * Limpia fragmentos cortados y caracteres OCR residuales al inicio y final de un punto clave,
- * asegurando que la oración inicie con mayúscula y sea completamente legible de corrido.
+ * Limpia fragmentos cortados, caracteres OCR residuales, viñetas duras y saltos de línea bruscos
+ * en los puntos y extractos clave del documento, asegurando lectura fluida, completa y profesional.
  */
 function cleanPuntoText(texto) {
   if (!texto) return '';
-  let s = texto.replace(/\ufffd/g, '').trim();
-  // Quitar elipsis, comas o restos numéricos huérfanos al inicio (ej. "...s ", "...,030,308")
+  let s = String(texto).replace(/\ufffd/g, '').trim();
+
+  // 1. Quitar elipsis, guiones y signos de puntuación iniciales
   s = s.replace(/^[….\s,-]+(?:\d+[,.\d]*)?\s*/, '');
-  // Quitar letras sueltas huérfanas al inicio de corte (ej. "...r, ", "...s ", "...cias ")
-  s = s.replace(/^[….\s,-]*[a-zA-ZáéíóúÁÉÍÓÚñÑ]{1,3}[,.\s-]+/, '');
-  // Quitar elipsis o símbolos al final
+
+  // 2. Si empieza con palabra mutilada en minúsculas seguida de una palabra con mayúscula
+  // Ej: "ad Medidas de Mitigación", "nos de nuevo ingreso El proyecto", "culturales, con una inversión"
+  s = s.replace(/^[a-záéíóúñ]{1,12}\s+([A-ZÁÉÍÓÚÑ])/, '$1');
+
+  // 3. Quitar viñetas sueltas al inicio (■, ▪, •, ▫, -, *)
+  s = s.replace(/^[■▪•▫\-\*\s]+/, '');
+
+  // 4. Reemplazar viñetas internas o caracteres de lista por un guión largo elegante
+  s = s.replace(/\s*[■▪•▫]\s*/g, ' — ');
+
+  // 5. Normalizar saltos de línea (\r, \n) y espacios múltiples a un solo espacio para evitar bajones bruscos
+  s = s.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // 6. Quitar elipsis, comas o símbolos mutilados al final
   s = s.replace(/[….\s,-]+$/, '');
-  // Asegurar mayúscula inicial
+
+  // 7. Asegurar mayúscula inicial
   if (s.length > 0) {
     s = s.charAt(0).toUpperCase() + s.slice(1);
+    // Si parece oración completa y no termina en puntuación, añadir punto
+    if (!/[.!?:;]$/.test(s)) {
+      s += '.';
+    }
   }
   return s.trim();
 }

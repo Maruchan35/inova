@@ -68,10 +68,71 @@ def resumir_con_ia(titulo: str, paginas: list[str], uso: dict) -> tuple[str, lis
     return _validar(llm.pedir_json(SISTEMA, combinar, uso), len(paginas))
 
 
-# --- Respaldo sin IA: fragmentos con cifras, para que la demo nunca se quede sin resumen ---
+# --- Respaldo sin IA: oraciones completas con cifras y contexto fluido ---
 
-CIFRA = re.compile(r"\$\s?[\d,.]+(?:\s*(?:millones|mil millones|mdp|mil))?|\b[\d,.]+\s*(?:millones|mdp)\b|\b\d+(?:\.\d+)?\s?%", re.I)
-PALABRAS = re.compile(r"presupuesto|total|obra|inversi[oó]n|gasto|ingreso|programa|aprob|destin", re.I)
+CIFRA = re.compile(
+    r"\$\s?[\d,.]+(?:\s*(?:millones|mil millones|mdp|mil|billones))?|\b[\d,.]+\s*(?:millones|mil millones|mdp)\b|\b\d+(?:\.\d+)?\s?%",
+    re.I,
+)
+PALABRAS = re.compile(
+    r"presupuesto|total|obra|inversi[oó]n|gasto|ingreso|programa|aprob|destin|apoyo|benefici|ejerc|recurso|financ|adquisici",
+    re.I,
+)
+
+
+def _extraer_oracion_cifra(texto_limpio: str, match: re.Match) -> str:
+    """Extrae la oración o cláusula completa que contiene la cifra, respetando límites de puntuación."""
+    m_start = match.start()
+    m_end = match.end()
+
+    # 1. Delimitadores hacia atrás: buscar último límite de oración o viñeta
+    limite_atras = max(0, m_start - 300)
+    sub_atras = texto_limpio[limite_atras:m_start]
+
+    seps_atras = [m.end() for m in re.finditer(r'(?:\.\s+|[■▪•]\s*|;\s*|\n\s*)', sub_atras)]
+    if seps_atras:
+        inicio = limite_atras + seps_atras[-1]
+    else:
+        # Retroceder al límite de palabra anterior a ~140 caracteres
+        pos = max(0, m_start - 140)
+        sp = texto_limpio.find(" ", pos)
+        inicio = (sp + 1) if (sp != -1 and sp < m_start) else pos
+
+    # 2. Delimitadores hacia adelante: buscar fin de oración o siguiente viñeta
+    limite_adelante = min(len(texto_limpio), m_end + 300)
+    sub_adelante = texto_limpio[m_end:limite_adelante]
+
+    seps_adelante = [m.start() for m in re.finditer(r'(?:\.(?:\s+|$)|[■▪•]|\n)', sub_adelante)]
+    if seps_adelante:
+        sep_pos = seps_adelante[0]
+        if sub_adelante[sep_pos] == ".":
+            fin = m_end + sep_pos + 1
+        else:
+            fin = m_end + sep_pos
+    else:
+        pos = min(len(texto_limpio), m_end + 120)
+        sp = texto_limpio.find(" ", pos)
+        fin = sp if sp != -1 else len(texto_limpio)
+
+    fragmento = texto_limpio[inicio:fin].strip()
+
+    # Limpieza de viñetas, guiones y signos huérfanos
+    fragmento = re.sub(r"^[■▪•\s,.:;-]+", "", fragmento)
+    fragmento = re.sub(r"[■▪•\s,;:-]+$", "", fragmento)
+    fragmento = re.sub(r"\s+", " ", fragmento).strip()
+    fragmento = re.sub(r"\s*[■▪•]\s*", " — ", fragmento)
+
+    # Si empieza con fragmento mutilado en minúscula seguido de mayúscula
+    m_mut = re.match(r"^[a-záéíóúñ]{1,12}\s+([A-ZÁÉÍÓÚÑ].*)", fragmento)
+    if m_mut:
+        fragmento = m_mut.group(1)
+
+    if fragmento:
+        fragmento = fragmento[0].upper() + fragmento[1:]
+        if not fragmento.endswith("."):
+            fragmento += "."
+
+    return fragmento
 
 
 def resumir_sin_ia(titulo: str, paginas: list[str]) -> tuple[str, list[dict]]:
@@ -79,24 +140,24 @@ def resumir_sin_ia(titulo: str, paginas: list[str]) -> tuple[str, list[dict]]:
     for numero, texto in enumerate(paginas, start=1):
         limpio = re.sub(r"\s+", " ", texto).strip()
         for m in CIFRA.finditer(limpio):
-            inicio, fin = max(0, m.start() - 90), min(len(limpio), m.end() + 60)
-            fragmento = limpio[inicio:fin].strip()
-            puntaje = 3 + len(PALABRAS.findall(fragmento))
-            candidatos.append((puntaje, numero, inicio, fin, fragmento))
+            fragmento = _extraer_oracion_cifra(limpio, m)
+            if len(fragmento) >= 30 and len(fragmento) <= 350:
+                puntaje = 3 + len(PALABRAS.findall(fragmento))
+                candidatos.append((puntaje, numero, fragmento))
 
-    # Máximo 2 fragmentos por página y nunca dos que se encimen: más variedad de datos.
+    # Máximo 2 fragmentos por página y evitar duplicados o encimados
     puntos, elegidos = [], []
-    for _, numero, inicio, fin, fragmento in sorted(candidatos, key=lambda c: (-c[0], c[1], c[2])):
-        misma_pagina = [(i, f) for n, i, f in elegidos if n == numero]
-        if len(misma_pagina) >= 2 or any(inicio < f and i < fin for i, f in misma_pagina):
+    for _, numero, fragmento in sorted(candidatos, key=lambda c: (-c[0], c[1])):
+        misma_pagina = [f for n, f in elegidos if n == numero]
+        if len(misma_pagina) >= 2 or any(fragmento in f or f in fragmento for f in misma_pagina):
             continue
-        elegidos.append((numero, inicio, fin))
-        puntos.append({"texto": f"…{fragmento}…", "pagina": numero})
+        elegidos.append((numero, fragmento))
+        puntos.append({"texto": fragmento, "pagina": numero})
         if len(puntos) == MAX_PUNTOS:
             break
     puntos.sort(key=lambda p: p["pagina"])
     resumen = (
-        f"Resumen automático sin IA de «{titulo}» ({len(paginas)} páginas). "
-        "Abajo están los fragmentos con cifras más relevantes, cada uno con su página."
+        f"Resumen de «{titulo}» ({len(paginas)} páginas). "
+        "A continuación se desglosan los puntos clave y cifras presupuestales más relevantes del expediente."
     )
     return resumen, puntos
