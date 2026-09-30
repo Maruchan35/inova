@@ -165,3 +165,15 @@ def test_puede_omitir_los_pdf_escaneados(entorno):
     r = cargar.cargar(con, csv, pdfs, omitir_escaneados=True)
     assert (r["procesados"], r["fallidos"], len(r["escaneados"])) == (1, 0, 1)
     assert [d["titulo"] for d in documentos(con)] == ["Informe"]  # el escaneado no queda en la base
+
+
+def test_procesa_con_varios_procesos(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    filas = []
+    for i in range(4):
+        (pdfs / f"proc{i}.pdf").write_bytes(pdf_con_texto([f"Documento {i} con presupuesto de ${i + 1},000 pesos"] * 2))
+        filas.append(f"proc{i}.pdf,Guanajuato,,informes,Proceso {i},2025")
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\n" + "\n".join(filas) + "\n")
+    r = cargar.cargar(con, csv, pdfs, procesos=2)
+    assert (r["procesados"], r["fallidos"]) == (4, 0)
+    assert cargar.cargar(con, csv, pdfs, procesos=2)["saltados"] == 4  # volver a correrlo no duplica
