@@ -485,3 +485,23 @@ nav ul {
   background: var(--primary-color); color: white; border: none;
   width: 36px; height: 36px; border-radius: 50%; margin-left: 8px; cursor: pointer;
 }
+
+/* Origen de cada respuesta del chatbot, contexto y avisos */
+.chat-contexto { display: block; opacity: .8; font-size: .75rem; margin-top: 2px; }
+.chat-aviso { align-self: center; font-size: .75rem; color: var(--text-muted); margin: 4px 0; }
+.chat-origen { font-size: .72rem; color: var(--text-muted); margin-top: 8px; border-top: 1px dashed #e5e7eb; padding-top: 6px; }
+.chat-origen.origen-cache { color: #047857; }
+.chat-origen.origen-sin_ia { color: #b45309; }
+
+/* Ruta de navegación, fuente oficial, visor y municipios */
+.migas { font-size: .9rem; color: var(--text-muted); margin-top: 1.5rem; }
+.migas .btn-link { font-size: .9rem; padding: 0; }
+.doc-fuente { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; background: #f8fafc;
+  border: 1px solid #e5e7eb; border-radius: 12px; padding: .9rem 1.2rem; margin: 1rem 0 1.5rem; font-size: .9rem; }
+.doc-fuente a { color: var(--primary-color); font-weight: 500; }
+.pagina-acciones { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: flex-end; align-items: center; margin-top: 1rem; }
+.pagina-acciones button:disabled { opacity: .4; cursor: default; }
+.pagina-pdf { color: var(--primary-color); font-weight: 500; margin-right: auto; }
+.municipios-lista { margin-top: 3rem; }
+.municipios-lista h3 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 1rem; }
+.municipios-lista > div { display: flex; flex-wrap: wrap; gap: .5rem; }
