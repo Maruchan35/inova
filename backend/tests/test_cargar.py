@@ -49,7 +49,7 @@ def test_carga_valida_y_reporta_filas_invalidas(entorno, capsys):
         "informe-estatal.pdf,Guanajuato,,informes,Informe estatal 2025,\n"
         "falso.pdf,Guanajuato,,informes,Falso,2025\n"
         "no-existe.pdf,Guanajuato,Irapuato,informes,No existe,2025\n"
-        "informe-estatal.pdf,Jalisco,,chismes,Repetido,dos mil\n"
+        "informe-estatal.pdf,Inexistente,,chismes,Repetido,dos mil\n"
     ))
     r = cargar.cargar(con, csv, pdfs)
     assert (r["procesados"], r["saltados"], r["fallidos"], r["invalidos"]) == (2, 0, 0, 3)
@@ -62,7 +62,7 @@ def test_carga_valida_y_reporta_filas_invalidas(entorno, capsys):
     salida = capsys.readouterr().out
     assert "Línea 4" in salida and "no es un PDF" in salida
     assert "Línea 5" in salida and "no existe" in salida
-    assert all(x in salida for x in ("Línea 6", "Jalisco", "chismes", "dos mil"))
+    assert all(x in salida for x in ("Línea 6", "Inexistente", "chismes", "dos mil"))
 
 
 def test_volver_a_ejecutar_no_duplica_y_retoma_los_que_fallaron(entorno):

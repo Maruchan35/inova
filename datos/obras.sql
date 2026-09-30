@@ -1,0 +1,3 @@
+-- Archivo reservado para obras georreferenciadas con auditoría presupuestal.
+-- La tabla `obras` está definida en `datos/schema.sql`.
+-- Se poblará con datos verificados de los decretos y cuentas públicas oficiales.
