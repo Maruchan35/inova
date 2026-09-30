@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import MapaMexico from './MapaMexico.jsx';
+import { vozDisponible } from '../voz.js';
 
 function quitarAcentos(str) {
   return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
@@ -79,7 +80,7 @@ const TEMAS = [
   'Cuenta Pública'
 ];
 
-export default function Portada({ onElegir, onDocumento }) {
+export default function Portada({ onElegir, onDocumento, onVoz }) {
   const [estados, setEstados] = useState([]);
   const [texto, setTexto] = useState('');
   const [lugares, setLugares] = useState([]);
@@ -286,6 +287,11 @@ export default function Portada({ onElegir, onDocumento }) {
               placeholder="Ej. Irapuato, Guanajuato, Presupuesto..." 
             />
             {buscando && <i className="fa-solid fa-circle-notch fa-spin" style={{ color: 'var(--accent-color)', marginRight: '10px' }}></i>}
+            {vozDisponible && onVoz && (
+              <button type="button" className="search-mic" onClick={onVoz} title="Toca y dilo con tu voz" aria-label="Buscar con la voz">
+                <i className="fa-solid fa-microphone"></i>
+              </button>
+            )}
             <button type="submit" className="search-btn">
               Explorar
             </button>

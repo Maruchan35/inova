@@ -167,3 +167,5 @@ Cosas a saber de esta computadora (Windows):
 - Estimación: un documento de 500 páginas cuesta ~$0.10-0.15 USD en procesarse, una sola vez.
 - Pendiente para Marko: agregar Baja California (o todos los estados) al catálogo de lugares, confirmar el
   formato de `datos/documentos.csv` y agregar la tabla `respuestas` (caché de preguntas permanente).
+
+- **Modo por voz** (30 sep): `backend/app/voz.py` y `POST /api/voz` deciden qué hacer con lo que dijo la persona (ir a un lugar y sección, inicio, atrás, o pregunta para el chatbot) reutilizando `entender`, sin IA. 19 tests en `tests/test_voz.py` (101 en total). El servidor público debe permitir `POST /api/voz`.

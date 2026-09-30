@@ -5,7 +5,7 @@ import Concentracion from './Concentracion.jsx';
 // Coordenadas base por defecto si no hay
 const DEFAULT_CENTER = [23.6345, -102.5528]; // México
 
-export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onContexto, onIr }) {
+export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onContexto, onIr, seccionPedida }) {
   const [datos, setDatos] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
   const [filtroTexto, setFiltroTexto] = useState('');
@@ -23,6 +23,13 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       setCategoriaActiva(null);
     }).catch(() => setDatos(null));
   }, [lugar.tipo, lugar.id]);
+
+  // Por voz: "quiero ver el presupuesto de Guanajuato" llega ya con la sección elegida.
+  useEffect(() => {
+    if (!datos || !seccionPedida || !datos.secciones?.some(s => s.clave === seccionPedida.clave)) return;
+    setCategoriaActiva(seccionPedida.clave);
+    setTimeout(() => docsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+  }, [datos, seccionPedida?.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const seleccionarCategoria = (clave) => {
     const nueva = categoriaActiva === clave ? null : clave;

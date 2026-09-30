@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
-from . import config, notificaciones, preguntas, procesamiento
+from . import config, notificaciones, preguntas, procesamiento, voz
 from .busqueda import buscar_fragmentos, filtros_sql
 from .db import abrir, conectar
 from .procesamiento import llm
@@ -211,6 +211,19 @@ def preguntas_sugeridas(estado_id: int | None = None, municipio_id: int | None =
                         documento_id: int | None = None, con: Con = Depends(conectar)):
     """Preguntas de ejemplo para el chatbot según la página en la que se está."""
     return preguntas.sugeridas(con, estado_id, municipio_id, documento_id)
+
+
+class Dicho(BaseModel):
+    texto: str
+    estado_id: int | None = None
+    municipio_id: int | None = None
+    documento_id: int | None = None
+
+
+@app.post("/api/voz")
+def modo_voz(datos: Dicho, con: Con = Depends(conectar)):
+    """Modo por voz: qué hacer con lo que dijo la persona (ir a un lugar, regresar o preguntarle al chatbot)."""
+    return voz.interpretar(con, datos.texto, datos.estado_id, datos.municipio_id, datos.documento_id)
 
 
 @app.get("/api/proveedores/concentracion")

@@ -34,6 +34,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pregunta, ...filtros, historial }),
     }),
+  // Modo por voz: qué hacer con lo que dijo la persona (ir a un lugar, regresar o preguntarle al chatbot)
+  voz: (texto, filtros = {}) =>
+    pedir('/voz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto, ...filtros }),
+    }),
   sugeridas: (filtros = {}) =>
     pedir(`/preguntas-sugeridas${query({ estado_id: filtros.estado_id, municipio_id: filtros.municipio_id, documento_id: filtros.documento_id })}`),
   concentracion: (filtros) => pedir(`/proveedores/concentracion${query(filtros)}`),

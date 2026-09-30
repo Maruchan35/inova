@@ -122,6 +122,18 @@ Preguntas de ejemplo para el chatbot según la página: `?estado_id=`, `?municip
 ["Háblame del informe de gobierno de Durango", "¿Qué dice el presupuesto del Estado de México?"]
 ```
 
+#### `POST /api/voz`
+Modo por voz. El navegador convierte la voz a texto y esta ruta dice qué hacer con lo dicho (no usa IA).
+Recibe `{ "texto": "quiero ver el presupuesto de Guanajuato", "estado_id": null, "municipio_id": null, "documento_id": null }`
+(los filtros son la página en la que se está) y devuelve:
+```json
+{ "accion": "ir", "texto": "quiero ver el presupuesto de Guanajuato", "decir": "Te llevo a Guanajuato, a la sección Presupuesto y finanzas.",
+  "tipo": "estado", "id": 1, "seccion": "presupuesto", "pregunta": null }
+```
+- `accion`: `"ir"` (a `/{tipo}/{id}`, con `seccion` si se pidió), `"inicio"`, `"atras"`, `"preguntar"` (mandar `pregunta`
+  a `/api/preguntar`) o `"decir"` (solo contestar: ayuda, no se escuchó, o hay varios municipios con ese nombre).
+- `decir`: lo que la página lee en voz alta (vacío cuando es una pregunta: se lee la respuesta del chatbot).
+
 ### Avisos por WhatsApp
 
 Cuando se procesa un documento nuevo, el backend avisa por WhatsApp a quienes siguen ese lugar: quien
