@@ -1,6 +1,5 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api.js';
-import Chatbot from './Chatbot.jsx';
 
 export default function Documento({ id, onVerPagina }) {
   const [doc, setDoc] = useState(null);
@@ -61,8 +60,6 @@ export default function Documento({ id, onVerPagina }) {
           </ul>
         </>
       )}
-
-      {doc.estatus === 'listo' && <Chatbot filtros={{ documento_id: doc.id }} onVerPagina={onVerPagina} />}
     </>
   );
 }
