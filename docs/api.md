@@ -99,7 +99,7 @@ sigue un municipio recibe sus documentos y los estatales; quien sigue un estado,
 
 #### `POST /api/suscripciones`
 Recibe `{ "telefono": "462 123 4567", "estado_id": 1, "municipio_id": 1 }` (`municipio_id` `null` = el
-estado) y manda un código de 6 dígitos por WhatsApp. Responde `202` con
+estado; si viene `municipio_id`, `estado_id` es opcional) y manda un código de 6 dígitos por WhatsApp. Responde `202` con
 `{ "estatus": "codigo_enviado", "lugar": "Irapuato" }`, o `{ "estatus": "ya_suscrito", "lugar": "Irapuato" }`
 si ya recibe avisos. Errores con `{ "detail": "..." }` para mostrarlo tal cual: `400` (número o lugar
 inválido), `429` (más de 3 códigos por número en una hora), `503` (no se pudo mandar el WhatsApp).

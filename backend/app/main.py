@@ -254,7 +254,7 @@ async def subir_documento(
 
 class Suscripcion(BaseModel):
     telefono: str
-    estado_id: int
+    estado_id: int | None = None  # si viene municipio_id, el estado se toma del municipio
     municipio_id: int | None = None
 
 
