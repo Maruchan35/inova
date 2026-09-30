@@ -6,6 +6,7 @@ import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
 import Suscripcion from './components/Suscripcion.jsx';
+import ModoVoz from './components/ModoVoz.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -53,6 +54,12 @@ export default function App() {
   const [pagina, setPagina] = useState(null);
   const [chatbotAbierto, setChatbotAbierto] = useState(false);
   const [contexto, setContexto] = useState('todos los documentos'); // sobre qué pregunta el chatbot
+  // Modo por voz: `pedirVoz` enciende el micrófono, `dictado` es la pregunta dicha que va al chatbot y
+  // `seccionPedida` la sección que se pidió al decir "quiero ver el presupuesto de Guanajuato".
+  const [pedirVoz, setPedirVoz] = useState(0);
+  const [dictado, setDictado] = useState(null);
+  const [seccionPedida, setSeccionPedida] = useState(null);
+  const escucharVoz = () => setPedirVoz(n => n + 1);
 
   const isDocumento = currentPath.startsWith('/documento/');
   const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
@@ -61,6 +68,7 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(window.location.pathname);
+      setSeccionPedida(null);
       setPagina(null);
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     };
@@ -77,8 +85,14 @@ export default function App() {
   const navigate = (path) => {
     window.history.pushState(null, '', path);
     setCurrentPath(path);
+    setSeccionPedida(null);
     setPagina(null);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
+
+  const irPorVoz = (tipo, id, seccion) => {
+    navigate(`/${tipo}/${id}`);
+    if (seccion) setSeccionPedida({ clave: seccion, n: Date.now() });
   };
 
   const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina).catch(() => {});
@@ -105,6 +119,7 @@ export default function App() {
         lugar={{ tipo, id }} 
         onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} 
         onDocumento={(dId) => navigate(`/documento/${dId}`)}
+        seccionPedida={seccionPedida}
         onContexto={setContexto}
         onIr={navigate} 
         onVerPagina={verPagina} 
@@ -112,7 +127,7 @@ export default function App() {
     );
     chatbotFiltros = tipo === 'estado' ? { estado_id: id } : { municipio_id: id };
   } else {
-    content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} onDocumento={(dId) => navigate(`/documento/${dId}`)} />;
+    content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} onDocumento={(dId) => navigate(`/documento/${dId}`)} onVoz={escucharVoz} />;
   }
 
   return (
@@ -175,7 +190,16 @@ export default function App() {
 
       <Suscripcion key={currentPath} autoOpen={false} lugar={lugarActual} nombre={isLugar ? 'tu gobierno' : 'tu estado'} />
 
-      <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
+      <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} dictado={dictado} onVoz={escucharVoz} />
+
+      <ModoVoz
+        filtros={chatbotFiltros}
+        pedir={pedirVoz}
+        onIr={irPorVoz}
+        onInicio={() => navigate('/')}
+        onAtras={() => window.history.back()}
+        onPreguntar={(texto) => setDictado({ texto, n: Date.now() })}
+      />
 
       <footer>
         <p>

@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../api.js';
 import Fragmento from './Fragmento.jsx';
+import { vozDisponible, hablar, callar } from '../voz.js';
+
+// Lo que se lee en voz alta cuando la pregunta se hizo hablando: la respuesta y de dónde sale.
+function paraLeer(res) {
+  const cita = res.citas?.[0];
+  return res.respuesta + (cita ? ` Esto sale de ${cita.documento_titulo}, página ${cita.pagina}.` : '');
+}
 
 // Debajo de cada respuesta: de dónde salió (IA, caché o sin IA), cuánto tardó y cuánto costó.
 function describirOrigen(detalle) {
@@ -46,7 +53,7 @@ function tamGuardado() {
   return TAM_NORMAL;
 }
 
-export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoPorDefecto, onCerrar }) {
+export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoPorDefecto, onCerrar, dictado, onVoz }) {
   const [open, setOpen] = useState(false);
   const [tam, setTam] = useState(tamGuardado);
   const inputRef = useRef(null);
@@ -113,9 +120,10 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
 
   const ampliado = tam.ancho > TAM_NORMAL.ancho + 60;
 
-  async function enviar(elegida) {
+  async function enviar(elegida, porVoz = false) {
     const txt = (typeof elegida === 'string' ? elegida : pregunta).trim();
     if (!txt || cargando) return;
+    callar();
     const historial = historialDe(mensajes);
     setPregunta('');
     setMensajes(prev => [...prev, { tipo: 'user', texto: txt }]);
@@ -124,12 +132,25 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
     try {
       const res = await api.preguntar(txt, filtros, historial);
       setMensajes(prev => [...prev, { tipo: 'bot', resultado: res }]);
+      if (porVoz) hablar(paraLeer(res));
     } catch (err) {
       setMensajes(prev => [...prev, { tipo: 'bot', error: 'Hubo un error al buscar en los documentos: ' + err.message }]);
     } finally {
       setCargando(false);
     }
   }
+
+  // Una pregunta dicha por voz: se abre el chat, se manda y la respuesta se lee en voz alta.
+  useEffect(() => {
+    if (dictado?.texto) {
+      setOpen(true);
+      enviar(dictado.texto, true);
+    }
+  }, [dictado?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) callar();
+  }, [open]);
 
   return (
     <div className="chatbot-container">
@@ -214,6 +235,9 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
               placeholder="Ej. ¿Cuánto costó el hospital?"
               onKeyDown={e => e.key === 'Enter' && enviar()}
             />
+            {vozDisponible && onVoz && (
+              <button className="chat-mic" onClick={onVoz} title="Pregunta hablando"><i className="fa-solid fa-microphone"></i></button>
+            )}
             <button onClick={enviar}><i className="fa-regular fa-paper-plane"></i></button>
           </div>
         </div>

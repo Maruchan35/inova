@@ -36,3 +36,5 @@
 - Falta: Formulario para subir documentos y la gráfica de concentración visual con porcentaje de riesgo.
 
 - **Chat más grande y ajustable** (rama `frontend/chat-grande-y-boton`, Jorge, 30 sep): la ventana del chatbot abre en 440×600, tiene un botón para ampliarla y se puede ajustar arrastrando su esquina de arriba a la izquierda (el tamaño se recuerda en el navegador). La página del documento tiene el botón "Chat con IA", que abre el chat sobre ese documento.
+
+- **Modo por voz** (rama `frontend/modo-voz`, Jorge, 30 sep): `src/voz.js` (reconocer y leer en voz alta con lo que trae el navegador, es-MX, sin costo) y `components/ModoVoz.jsx` (micrófono flotante y panel "Te escucho"). También hay micrófono en el buscador de la portada y en el chat. Lo dicho va a `POST /api/voz`, que responde si hay que ir a un lugar (con sección), regresar o preguntarle al chatbot; las preguntas hechas por voz se leen en voz alta con su documento y página. Solo funciona en Chrome y Edge, con internet y en https o localhost; en otros navegadores los micrófonos no se muestran.
