@@ -9,14 +9,13 @@ function paraLeer(res) {
   return res.respuesta + (cita ? ` Esto sale de ${cita.documento_titulo}, página ${cita.pagina}.` : '');
 }
 
-// Debajo de cada respuesta: de dónde salió (IA, caché o sin IA), cuánto tardó y cuánto costó.
+// Debajo de cada respuesta: de dónde salió (IA, caché o sin IA) y cuánto tardó.
 function describirOrigen(detalle) {
   if (!detalle) return null;
-  const costo = detalle.costo_usd ? ` · $${detalle.costo_usd.toFixed(4)} USD` : '';
   const amplio = detalle.alcance === 'todo' ? 'No había nada de este lugar; busqué en todos los documentos. ' : '';
   switch (detalle.origen) {
-    case 'ia': return `${amplio}Respondió la IA (DeepSeek) en ${detalle.segundos} s${costo}`;
-    case 'cache': return 'Respuesta guardada: alguien ya lo había preguntado · al instante · $0';
+    case 'ia': return `${amplio}Respondió la IA en ${detalle.segundos} s`;
+    case 'cache': return 'Respuesta guardada · al instante';
     case 'sin_resultados': return 'No encontré páginas relacionadas con tu pregunta.';
     default: return amplio + (detalle.motivo || 'La IA no está disponible en este momento.');
   }
