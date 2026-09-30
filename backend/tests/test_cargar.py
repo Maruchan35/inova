@@ -188,3 +188,19 @@ def test_los_escaneados_se_anotan_y_no_se_vuelven_a_leer(entorno):
     assert len(r["escaneados"]) == 1 and lista.read_text(encoding="utf-8").strip().endswith("escaneado.pdf")
     otra = cargar.cargar(con, csv, pdfs, omitir_escaneados=True, lista_escaneados=lista)
     assert (otra["escaneados_previos"], otra["escaneados"], otra["procesados"]) == (1, [], 0)
+
+
+def test_el_mismo_archivo_con_otro_nombre_no_se_duplica(entorno):
+    import hashlib
+    import shutil
+
+    cargar, con, carpeta, pdfs = entorno
+    shutil.copy(pdfs / "presupuesto-leon.pdf", pdfs / "copia.pdf")
+    huella = hashlib.sha256((pdfs / "copia.pdf").read_bytes()).hexdigest()
+    encabezado = "archivo,estado,municipio,seccion,titulo,anio,url_fuente,formato,sha256,fecha_publicacion,dependencia\n"
+    uno = escribir_csv(carpeta, encabezado + f"presupuesto-leon.pdf,Guanajuato,León,presupuesto,Original,2026,,pdf,{huella},,\n")
+    assert cargar.cargar(con, uno, pdfs)["procesados"] == 1
+    otro = escribir_csv(carpeta, encabezado + f"copia.pdf,Guanajuato,,presupuesto,Copia,2026,,pdf,{huella},,\n")
+    r = cargar.cargar(con, otro, pdfs)
+    assert (r["procesados"], r["saltados"]) == (0, 1)
+    assert [d["titulo"] for d in documentos(con)] == ["Original"]

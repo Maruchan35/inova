@@ -87,6 +87,10 @@
   llamada; 15 personas a la vez = 1 llamada; preguntas distintas sobre el mismo informe: 99.8% del texto
   sale del caché de DeepSeek ($0.0008 contra $0.0315). Si cambias las instrucciones de la IA en
   `preguntas.py`, sube `VERSION_RESPUESTAS` para no servir respuestas viejas.
+- **Búsqueda con miles de documentos:** sin palabras vacías ("cuánto", "qué", "hay"…), primero páginas con
+  todas las palabras importantes y luego con alguna; el chatbot no busca el nombre del lugar ya filtrado.
+  `cargar.py`: `--procesos N` (varios núcleos), `--omitir-escaneados` (lista en `pendientes_ocr.txt`), salta
+  archivos repetidos por sha256; `cryptography` para PDFs encriptados.
 - Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
   columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
   cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.

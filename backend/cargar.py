@@ -180,6 +180,9 @@ def registrar(con: sqlite3.Connection, doc: dict, reprocesar: bool) -> int | Non
     datos = tuple(doc[c] for c in columnas)
     if existente and existente["estatus"] == "listo" and not reprocesar:
         return None
+    if not existente and doc.get("sha256"):  # el mismo archivo con otro nombre: ya está cargado, no se duplica
+        if con.execute("SELECT 1 FROM documentos WHERE sha256 = ?", (doc["sha256"].lower(),)).fetchone():
+            return None
     if existente:  # quedó a medias, con error, o se pidió reprocesar: se actualiza con lo que diga el CSV
         con.execute(
             f"UPDATE documentos SET {', '.join(f'{c} = ?' for c in columnas)} WHERE id = ?", (*datos, existente["id"])

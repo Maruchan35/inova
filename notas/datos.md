@@ -115,3 +115,22 @@ Actualmente el esquema utiliza `pagina INTEGER` en `paginas` y citas. Para docum
 - **Inicialización de base:** `python datos/init_db.py` probado con éxito, reconstruye `cabildo.db` con catálogo INEGI íntegro (32 estados, 2,475 municipios).
 - **Suite de pruebas:** En `backend/`, `pytest` pasa al 100% (37/37 pruebas aprobadas).
 - **Control de versiones:** Rama lista en `datos/catalogo-guanajuato-documentos` sin PDFs versionados en Git.
+
+## Sesión de Jorge (30 sep 2026, madrugada; Marko dormido)
+
+- **Catálogo INEGI corregido** con el catálogo oficial que baja `backend/recolector/catalogo.py` (API de claves
+  geoestadísticas del INEGI): 2,478 municipios. Se arreglaron las claves recorridas (14 de Guanajuato, 4 de
+  Guerrero, Chiapas), nombres oficiales y acentos, y se agregaron los 5 que faltaban (el segundo San Juan y San
+  Pedro Mixtepec de Oaxaca, Villa de Pozos, Eldorado y Juan José Ríos). Se conservaron todos los ID.
+  `datos/lugares.sql` se regeneró desde la base corregida.
+- **Documentos del recolector** (`documentos/`, 6.8 GB, fuera de Git; índice en `documentos/indice.csv` con liga
+  directa y sha256 de cada archivo) cargados con `backend/cargar.py`, sin IA:
+  - 1,691 documentos con texto (84 mil páginas), de los 32 estados y 379 municipios.
+  - 989 escaneados sin texto: fuera de la base, listados en `documentos/pendientes_ocr.txt`.
+  - Fuera también: 4 Excel, 15 archivos que no eran PDF (el sitio devolvió una página web) y 1 PDF dañado
+    (Plan de Desarrollo de Teoloyucan).
+  - 20 PDF marcados para revisar a mano porque parecen impresos desde un navegador.
+  - Se quitaron 5 duplicados exactos; el informe de Guanajuato quedó una sola vez, con su liga oficial.
+- **La base no está en Git** (`cabildo.db`, ~300 MB). Para tenerla en otra computadora: correr el recolector y
+  `cargar.py`, o compartir el archivo.
+- Pendiente: OCR de los escaneados, leer Excel, y los resúmenes con IA de todos (~$6–12 USD).
