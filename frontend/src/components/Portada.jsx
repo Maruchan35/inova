@@ -9,6 +9,7 @@ export default function Portada({ onElegir }) {
   const [estados, setEstados] = useState([]);
   const [texto, setTexto] = useState('');
   const [resultados, setResultados] = useState([]);
+  const [aviso, setAviso] = useState('');
   const wrapperRef = useRef(null);
 
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function Portada({ onElegir }) {
   }, []);
 
   useEffect(() => {
+    setAviso('');
     if (!texto.trim()) {
       setResultados([]);
       return;
@@ -45,6 +47,16 @@ export default function Portada({ onElegir }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [wrapperRef]);
 
+  // "Explorar" o Enter: abre el primer lugar que coincide con lo escrito.
+  function explorar(e) {
+    e.preventDefault();
+    if (resultados.length > 0) {
+      onElegir({ tipo: resultados[0].tipo, id: resultados[0].id });
+    } else if (texto.trim()) {
+      setAviso('No encontramos ese lugar. Prueba con el nombre de un estado o municipio.');
+    }
+  }
+
   return (
     <>
       <section className="hero">
@@ -52,7 +64,7 @@ export default function Portada({ onElegir }) {
         <p>Busca cualquier estado o municipio y accede a informes, presupuestos y contratos al instante.</p>
         
         <div className="search-container" ref={wrapperRef}>
-          <div className="search-bar">
+          <form className="search-bar" onSubmit={explorar}>
             <i className="fa-solid fa-magnifying-glass" style={{ color: '#aaa', marginLeft: '15px' }}></i>
             <input 
               type="text" 
@@ -60,10 +72,11 @@ export default function Portada({ onElegir }) {
               onChange={e => setTexto(e.target.value)} 
               placeholder="Ej. Irapuato, Guanajuato..." 
             />
-            <button className="search-btn">
+            <button type="submit" className="search-btn">
               Explorar
             </button>
-          </div>
+          </form>
+          {aviso && <p className="tenue" style={{ marginTop: '10px' }}>{aviso}</p>}
           
           {resultados.length > 0 && (
             <ul className="search-results">

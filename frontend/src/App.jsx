@@ -66,7 +66,11 @@ export default function App() {
             <li>
               <button className="btn-link" onClick={() => {
                 navigate('/');
-                setTimeout(() => window.scrollTo({ top: document.querySelector('.search-container')?.offsetTop || 0, behavior: 'smooth' }), 100);
+                setTimeout(() => {
+                  const buscador = document.querySelector('.search-bar input');
+                  buscador?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  buscador?.focus();
+                }, 100);
               }}>
                 Buscar lugar
               </button>

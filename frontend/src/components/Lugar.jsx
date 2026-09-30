@@ -139,11 +139,13 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
         </div>
       )}
 
-      <div className="cta-container">
-        <button className="cta-btn" onClick={() => alert("Aquí se abriría la vista completa de categorías y años.")}>
-          Ver todos los archivos
-        </button>
-      </div>
+      {categoriaActiva && (
+        <div className="cta-container">
+          <button className="cta-btn" onClick={() => setCategoriaActiva(null)}>
+            Ver todos los archivos
+          </button>
+        </div>
+      )}
 
       <Concentracion filtros={filtros} locationName={locationName} />
       
