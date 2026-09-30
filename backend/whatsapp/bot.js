@@ -19,6 +19,13 @@ import QRCode from 'qrcode'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 
+// libsignal (dependencia de Baileys) imprime sesiones completas, con llaves privadas: nunca deben quedar en un log.
+const SECRETO = /^(Closing session|Closing open session|Removing old closed session|Decrypted message with closed session|Session error|Failed to decrypt)/
+for (const metodo of ['log', 'info', 'warn', 'error']) {
+  const original = console[metodo].bind(console)
+  console[metodo] = (...args) => { if (!(typeof args[0] === 'string' && SECRETO.test(args[0]))) original(...args) }
+}
+
 // Misma configuración que el backend: backend/.env (las variables del entorno tienen prioridad).
 const ENV = path.join(AQUI, '..', '.env')
 if (fs.existsSync(ENV)) {
