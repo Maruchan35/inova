@@ -74,14 +74,21 @@
 
 ## En progreso
 
-- Rama: `backend/notificaciones`
-- Tarea: avisos por WhatsApp listos en modo prueba; falta vincular el número (QR) y probar con teléfonos reales
+- **Versión 2 en `main` (etiqueta `v2.0`)**: backend + datos de Marko (catálogo INEGI, metadatos, tablas de
+  avisos) + frontend de Alisson (direcciones propias, formulario de WhatsApp, mapa con coordenadas reales).
+  Probado de punta a punta el 29 de sep de 2026: el bot envió código, bienvenida y el aviso del informe real.
+- Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
+  columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
+  cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.
+- Pendiente de datos (Marko): claves INEGI recorridas en 14 municipios de Guanajuato, 2 municipios de
+  Oaxaca perdidos por nombre repetido y la clave 07125 de Chiapas.
 
 ## Para retomar en una sesión nueva (léelo primero)
 
-1. Rama de trabajo: **`backend/respuesta-ia`**. El repo está en `Documents\inova\inova` (la carpeta de
-   afuera es otro repo viejo: no hagas push desde ahí). `git checkout backend/respuesta-ia`,
-   `git fetch origin`, `git merge origin/main`.
+1. Crea una rama nueva desde `main` para cada tarea (`git fetch origin` y `git switch -c backend/<tarea> origin/main`).
+   El repo está en `Documents\inova\inova` (la carpeta de afuera es otro repo viejo: no hagas push desde ahí).
+   Para correr todo: backend (`uvicorn`), frontend (`npm run dev`) y, para avisos reales, el bot
+   (`cd backend/whatsapp` → `npm install` → `npm start`; la sesión vinculada queda en `backend/whatsapp/sesion/`).
 2. **Clave de DeepSeek:** está en `backend/.env` (solo local, Git la ignora). Si no existe en esta
    computadora, pídesela al usuario y créala con el formato de `backend/.env.example`. **Nunca la subas.**
 3. **Base de datos local:** `python datos/init_db.py` la borra y la recrea con los datos de ejemplo.
