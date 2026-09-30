@@ -177,3 +177,14 @@ def test_procesa_con_varios_procesos(entorno):
     r = cargar.cargar(con, csv, pdfs, procesos=2)
     assert (r["procesados"], r["fallidos"]) == (4, 0)
     assert cargar.cargar(con, csv, pdfs, procesos=2)["saltados"] == 4  # volver a correrlo no duplica
+
+
+def test_los_escaneados_se_anotan_y_no_se_vuelven_a_leer(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    (pdfs / "escaneado.pdf").write_bytes(pdf_con_texto([""]))
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\nescaneado.pdf,Guanajuato,,informes,Escaneado,2025\n")
+    lista = carpeta / "pendientes_ocr.txt"
+    r = cargar.cargar(con, csv, pdfs, omitir_escaneados=True, lista_escaneados=lista)
+    assert len(r["escaneados"]) == 1 and lista.read_text(encoding="utf-8").strip().endswith("escaneado.pdf")
+    otra = cargar.cargar(con, csv, pdfs, omitir_escaneados=True, lista_escaneados=lista)
+    assert (otra["escaneados_previos"], otra["escaneados"], otra["procesados"]) == (1, [], 0)

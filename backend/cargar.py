@@ -222,7 +222,8 @@ def _cargar_uno(ruta_db: str, doc: dict, reprocesar: bool, omitir_escaneados: bo
 
 
 def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reprocesar=False, solo_revisar=False,
-           hilos: int = 3, omitir_escaneados: bool = False, procesos: int = 0) -> dict:
+           hilos: int = 3, omitir_escaneados: bool = False, procesos: int = 0,
+           lista_escaneados: Path | None = None) -> dict:
     """Carga los documentos del CSV. Con `procesos` > 0 usa varios núcleos (leer PDFs es trabajo de CPU,
     y los hilos de Python no lo reparten); si no, `hilos` hilos (bien para la IA, que es esperar la red)."""
     validos, errores, avisos = validar(con, leer_csv(ruta_csv), carpeta_pdfs)
@@ -236,6 +237,15 @@ def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reproces
         print(f"Revisión: {len(validos)} filas correctas ({len(avisos)} para revisar), {len(errores)} con errores."
               " No se procesó nada.")
         return resultado
+
+    # Los escaneados de vueltas anteriores no se vuelven a leer: ya se sabe que no tienen texto.
+    ya_escaneados = set()
+    if omitir_escaneados and lista_escaneados and lista_escaneados.is_file():
+        ya_escaneados = set(lista_escaneados.read_text(encoding="utf-8").split("\n")) - {""}
+        antes = len(validos)
+        validos = [d for d in validos if d["archivo"] not in ya_escaneados]
+        resultado["escaneados_previos"] = antes - len(validos)
+        print(f"{resultado['escaneados_previos']} escaneados de vueltas anteriores se saltan ({lista_escaneados.name})")
 
     motor = llm.modelo() if llm.configurado() else "respaldo sin IA (no hay DEEPSEEK_API_KEY en backend/.env)"
     a_la_vez = f"{procesos} procesos" if procesos > 0 else f"{hilos} hilos"
@@ -262,6 +272,9 @@ def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reproces
                       f" · {bitacora['motor']} · {bitacora['segundos']} s · ${bitacora['costo_usd']:.4f} USD", flush=True)
             elif r["estado"] == "escaneado":
                 resultado["escaneados"].append(doc["archivo"])
+                if lista_escaneados:  # se anota al momento: si la carga se interrumpe, no se pierde
+                    with lista_escaneados.open("a", encoding="utf-8") as f:
+                        f.write(doc["archivo"] + "\n")
                 print(f"{prefijo}  (escaneado, sin texto: se omite hasta tener OCR)", flush=True)
             else:
                 resultado["fallidos"] += 1
@@ -298,11 +311,10 @@ def main() -> int:
         return 1
     con = db.abrir()
     try:
+        lista = args.csv.with_name("pendientes_ocr.txt")
         r = cargar(con, args.csv, args.pdfs, args.reprocesar, args.solo_revisar, args.hilos, args.omitir_escaneados,
-                   args.procesos)
-        if r["escaneados"]:
-            lista = args.csv.with_name("pendientes_ocr.txt")
-            lista.write_text("\n".join(r["escaneados"]) + "\n", encoding="utf-8")
+                   args.procesos, lista)
+        if r["escaneados"] or r.get("escaneados_previos"):
             print(f"Lista de escaneados para OCR: {lista}")
     finally:
         con.close()
