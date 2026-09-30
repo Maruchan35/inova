@@ -178,7 +178,10 @@ export default function App() {
       <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>
-        <p>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</p>
+        <p>
+          &copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.
+          <span className="version-badge">v2.2.0</span>
+        </p>
       </footer>
     </>
   );
