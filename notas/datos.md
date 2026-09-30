@@ -131,6 +131,6 @@ Actualmente el esquema utiliza `pagina INTEGER` en `paginas` y citas. Para docum
     (Plan de Desarrollo de Teoloyucan).
   - 20 PDF marcados para revisar a mano porque parecen impresos desde un navegador.
   - Se quitaron 5 duplicados exactos; el informe de Guanajuato quedó una sola vez, con su liga oficial.
-- **La base no está en Git** (`cabildo.db`, ~300 MB). Para tenerla en otra computadora: correr el recolector y
-  `cargar.py`, o compartir el archivo.
+- **La base no está en Git** (`cabildo.db`, ~300 MB): se publica en los Releases de GitHub sin datos personales
+  (`base-2026-09-30`, 99 MB comprimida) y cada quien la baja con `python datos/descargar_base.py`.
 - Pendiente: OCR de los escaneados, leer Excel, y los resúmenes con IA de todos (~$6–12 USD).
