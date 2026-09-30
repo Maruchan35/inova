@@ -156,3 +156,24 @@ def test_cada_respuesta_dice_de_donde_salio(cliente, ia):
 def test_sin_clave_de_ia_lo_dice(cliente):
     detalle = preguntar(cliente, "¿Cuánto costó el mercado?", municipio_id=1)["detalle"]
     assert detalle["origen"] == "sin_ia" and detalle["motivo"]
+
+
+def test_en_un_municipio_tambien_busca_en_los_documentos_estatales(cliente, ia):
+    # "escuelas" solo está en el informe estatal (documento 4), no en los documentos de Irapuato
+    ia.respuesta = {"encontrado": True, "respuesta": "Se construyeron 35 escuelas.", "fuentes": [1]}
+    r = preguntar(cliente, "¿Cuántas escuelas se construyeron?", municipio_id=1)
+    assert [(c["documento_id"], c["pagina"]) for c in r["citas"]] == [(4, 2)]
+    assert "Informe de Gobierno del Estado 2025 (ejemplo)" in ia.llamadas[0]
+    assert r["detalle"]["alcance"] == "lugar"
+
+
+def test_si_no_hay_nada_del_lugar_busca_en_todo_el_catalogo(cliente, ia):
+    # El mercado solo aparece en un documento de Irapuato; la pregunta se hace desde León
+    ia.respuesta = {"encontrado": True, "respuesta": "El mercado costó $2,300,000.", "fuentes": [1]}
+    r = preguntar(cliente, "¿Cuánto costó el mercado?", municipio_id=2)
+    assert r["citas"][0]["documento_id"] == 3 and r["detalle"]["alcance"] == "todo"
+
+
+def test_sin_ia_tambien_busca_en_los_estatales(cliente):
+    r = preguntar(cliente, "¿Cuántas escuelas se construyeron?", municipio_id=1)
+    assert r["respuesta"].startswith("Encontré") and r["citas"][0]["documento_id"] == 4

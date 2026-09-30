@@ -92,3 +92,10 @@ def test_concentracion(cliente):
 def test_vista_previa(cliente):
     r = cliente.get("/vista")
     assert r.status_code == 200 and "CabildoAbierto" in r.text
+
+
+def test_buscar_encuentra_singular_y_plural(cliente):
+    # El acta dice "luminarias"; se busca en singular
+    citas = cliente.get("/api/buscar", params={"q": "luminaria"}).json()["resultados"]
+    assert (citas[0]["documento_id"], citas[0]["pagina"]) == (1, 3)
+    assert "[[luminarias]]" in citas[0]["fragmento"]

@@ -6,11 +6,12 @@ import Fragmento from './Fragmento.jsx';
 function describirOrigen(detalle) {
   if (!detalle) return null;
   const costo = detalle.costo_usd ? ` · $${detalle.costo_usd.toFixed(4)} USD` : '';
+  const amplio = detalle.alcance === 'todo' ? 'No había nada de este lugar; busqué en todos los documentos. ' : '';
   switch (detalle.origen) {
-    case 'ia': return `Respondió la IA (DeepSeek) en ${detalle.segundos} s${costo}`;
+    case 'ia': return `${amplio}Respondió la IA (DeepSeek) en ${detalle.segundos} s${costo}`;
     case 'cache': return 'Respuesta guardada: alguien ya lo había preguntado · al instante · $0';
     case 'sin_resultados': return 'No encontré páginas relacionadas con tu pregunta.';
-    default: return detalle.motivo || 'La IA no está disponible en este momento.';
+    default: return amplio + (detalle.motivo || 'La IA no está disponible en este momento.');
   }
 }
 
