@@ -28,6 +28,8 @@ Thumbs.db
 # Bases de datos locales
 *.sqlite
 *.db
+*.db-journal
+*.respaldo
 
 # PDFs subidos al backend
 backend/subidos/

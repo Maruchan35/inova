@@ -164,14 +164,36 @@ nav ul {
   box-shadow: 0 10px 40px rgba(0,0,0,0.1);
   margin-top: 10px;
   z-index: 100;
-  max-height: 250px;
+  max-height: 420px;
   overflow-y: auto;
   list-style: none;
   text-align: left;
 }
 
+.search-group-title {
+  padding: 10px 20px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  background: #f8f9fa !important;
+  border-bottom: 1px solid #eee !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  cursor: default !important;
+}
+
+.badge-tipo {
+  font-size: 0.7rem;
+  background: var(--secondary-color);
+  color: var(--primary-color);
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
 .search-results li {
-  padding: 15px 25px;
+  padding: 14px 22px;
   border-bottom: 1px solid #f9f9f9;
   cursor: pointer;
   color: var(--text-main);
@@ -179,8 +201,72 @@ nav ul {
   transition: background 0.2s;
 }
 
-.search-results li:hover {
+.search-results li:not(.search-group-title):hover {
   background: var(--secondary-color);
+}
+
+/* Sugerencias Inteligentes de Búsqueda */
+.sugerencias-banner {
+  margin-top: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-align: left;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.sugerencias-header {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.sugerencias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-sugerencia {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.chip-sugerencia:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.chip-sugerencia i {
+  color: inherit !important;
+  margin: 0 !important;
+  font-size: 0.8rem;
+}
+
+.sugerencia-item {
+  background: #fafbfc;
+  transition: background 0.15s ease;
+}
+
+.sugerencia-item:hover {
+  background: #ecfdf5 !important;
 }
 
 /* Como funciona Carousel */
@@ -300,36 +386,31 @@ nav ul {
   background: #e5e5e5; /* Placeholder map background */
 }
 
-/* Documents Carousel */
+/* Documents Grid */
 .docs-carousel-container {
-  margin-top: 2rem;
-  overflow-x: auto;
-  display: flex;
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   padding-bottom: 1rem;
-  scroll-snap-type: x mandatory;
-}
-
-.docs-carousel-container::-webkit-scrollbar {
-  height: 6px;
-}
-
-.docs-carousel-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 10px;
 }
 
 .doc-card {
-  min-width: 280px;
+  min-width: 0;
   background: white;
   border-radius: var(--border-radius);
   padding: 1.5rem;
   box-shadow: var(--card-shadow);
   border-left: 4px solid var(--accent-color);
-  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.doc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
 }
 
 .doc-card h4 {
