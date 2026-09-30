@@ -24,6 +24,23 @@ def configurado() -> bool:
     return bool(os.environ.get("DEEPSEEK_API_KEY", "").strip())
 
 
+def saldo() -> float | None:
+    """Dólares que quedan en la cuenta de DeepSeek, o None si no se pudo consultar."""
+    try:
+        respuesta = httpx.get(
+            f"{os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')}/user/balance",
+            headers={"Authorization": f"Bearer {os.environ['DEEPSEEK_API_KEY'].strip()}"},
+            timeout=15,
+        )
+        respuesta.raise_for_status()
+        for cuenta in respuesta.json().get("balance_infos", []):
+            if cuenta.get("currency") == "USD":
+                return float(cuenta["total_balance"])
+    except Exception:  # sin red, sin clave o respuesta rara: quien pregunta decide qué hacer sin el dato
+        pass
+    return None
+
+
 def pedir_json(sistema: str, usuario: str, uso: dict) -> dict:
     """Llama al modelo pidiendo JSON y acumula los tokens usados en `uso`."""
     for espera in (*ESPERAS, None):
