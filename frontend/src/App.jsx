@@ -4,10 +4,12 @@ import Portada from './components/Portada.jsx';
 import Lugar from './components/Lugar.jsx';
 import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
+import Chatbot from './components/Chatbot.jsx';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [pagina, setPagina] = useState(null);
+  const [chatbotAbierto, setChatbotAbierto] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => setCurrentPath(window.location.pathname);
@@ -23,12 +25,14 @@ export default function App() {
   const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina);
 
   let content = null;
+  let chatbotFiltros = {};
   const isDocumento = currentPath.startsWith('/documento/');
   const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
 
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
     content = <Documento id={id} onVerPagina={verPagina} />;
+    chatbotFiltros = { documento_id: id };
   } else if (isLugar) {
     const partes = currentPath.split('/');
     const tipo = partes[1]; // 'estado' o 'municipio'
@@ -41,6 +45,7 @@ export default function App() {
         onVerPagina={verPagina} 
       />
     );
+    chatbotFiltros = tipo === 'estado' ? { estado_id: id } : { municipio_id: id };
   } else {
     content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} />;
   }
@@ -56,6 +61,19 @@ export default function App() {
             <li>
               <button className="btn-link" onClick={() => navigate('/')}>
                 Inicio
+              </button>
+            </li>
+            <li>
+              <button className="btn-link" onClick={() => {
+                navigate('/');
+                setTimeout(() => window.scrollTo({ top: document.querySelector('.search-container')?.offsetTop || 0, behavior: 'smooth' }), 100);
+              }}>
+                Buscar lugar
+              </button>
+            </li>
+            <li>
+              <button className="btn-link" onClick={() => setChatbotAbierto(true)}>
+                Pregúntale a la IA
               </button>
             </li>
             {(isLugar || isDocumento) && (
@@ -74,6 +92,8 @@ export default function App() {
       <main>
         {content}
       </main>
+
+      <Chatbot filtros={chatbotFiltros} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>
         <p>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</p>

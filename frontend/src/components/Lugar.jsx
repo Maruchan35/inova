@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import Concentracion from './Concentracion.jsx';
-import Chatbot from './Chatbot.jsx';
 import Suscripcion from './Suscripcion.jsx';
 
 // Coordenadas base por defecto si no hay
@@ -190,8 +189,6 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
       <Concentracion filtros={filtros} locationName={locationName} />
       
       <Suscripcion lugar={lugar} />
-      
-      <Chatbot filtros={filtros} onVerPagina={onVerPagina} />
     </div>
   );
 }
