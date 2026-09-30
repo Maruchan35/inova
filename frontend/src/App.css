@@ -39,18 +39,19 @@ header {
 }
 
 .logo {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 800;
   color: var(--primary-color);
   display: flex;
   align-items: center;
-  gap: 10px;
-  letter-spacing: -0.5px;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
-.logo i {
-  color: var(--accent-color);
-  font-size: 1.2rem;
+.logo-pillars-icon {
+  color: var(--primary-color);
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .interactive-logo {
@@ -60,8 +61,27 @@ header {
 }
 
 .interactive-logo:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   transform: translateY(-1px);
+}
+
+.interactive-logo:hover .logo-pillars-icon {
+  color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+.logo-brand-text {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  font-size: 1.25rem;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.interactive-logo:hover .logo-brand-text {
+  color: var(--accent-color);
 }
 
 nav ul {
@@ -1696,4 +1716,393 @@ footer {
 
 @media (max-width: 340px) {
   .doc-ficha-grid { grid-template-columns: 1fr; }
+}
+
+/* ========================================================
+   ESPACIO PUBLICITARIO (ORILLA INFERIOR IZQUIERDA)
+   ======================================================== */
+
+.ad-container-bottom-left {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 95;
+  pointer-events: auto;
+}
+
+/* Píldora minimizada permanente por defecto */
+.ad-pill-minimizado {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 50px;
+  padding: 8px 16px;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.ad-pill-minimizado:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.ad-pill-icon {
+  color: var(--accent-color, #0284c7);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.ad-pill-flecha {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-left: 2px;
+  transition: transform 0.2s;
+}
+
+/* Tarjeta expandida al hacer clic */
+.ad-expanded-card {
+  width: 260px;
+  max-width: calc(100vw - 40px);
+  animation: adSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes adSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .ad-container-bottom-left {
+    left: 14px;
+    bottom: 14px;
+  }
+  .ad-pill-minimizado {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+  }
+  .ad-expanded-card {
+    width: min(280px, calc(100vw - 28px));
+  }
+}
+
+/* Estilos de la tarjeta rectangular gris */
+.ad-rectangulo-orilla {
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.ad-rectangulo-orilla:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.ad-cerrar-discreto {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.ad-cerrar-discreto:hover {
+  color: #475569;
+}
+
+.ad-badge-header {
+  margin-bottom: 10px;
+}
+
+.ad-pill-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.ad-placeholder-graphic {
+  background: #edf2f7;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 16px 8px;
+  margin: 10px 0;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.ad-placeholder-graphic i {
+  font-size: 1.5rem;
+  color: #a0aec0;
+}
+
+.ad-content-text h5 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-color, #1e293b);
+  margin: 0 0 6px 0;
+}
+
+.ad-content-text p {
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0 0 12px 0;
+}
+
+.ad-btn-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 7px 12px;
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.ad-btn-accion:hover {
+  background: var(--accent-color, #0284c7);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+.ad-footer-legal {
+  display: block;
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+/* Botón flotante para reabrir cuando se minimizó */
+.ad-reabrir-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.ad-reabrir-izq {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-left: none;
+}
+
+.ad-reabrir-der {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-right: none;
+}
+
+.ad-reabrir-btn:hover {
+  background: #e2e8f0;
+  color: var(--primary-color);
+}
+
+/* Modal de Información Publicitaria */
+.modal-publicidad-card {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 620px;
+  width: 92%;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-publicidad-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.modal-pub-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: var(--accent-color, #0284c7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.modal-pub-subtitle {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.modal-pub-beneficios {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.beneficio-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.beneficio-item i {
+  color: var(--accent-color, #0284c7);
+  font-size: 1.1rem;
+  margin-top: 3px;
+}
+
+.beneficio-item strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--primary-color);
+}
+
+.beneficio-item p {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.modal-pub-form h4 {
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  margin-bottom: 14px;
+}
+
+.pub-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .pub-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modal-pub-form label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.modal-pub-form input,
+.modal-pub-form textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.modal-pub-form input:focus,
+.modal-pub-form textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.modal-pub-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.btn-whatsapp-ad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  background: #25d366;
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.btn-whatsapp-ad:hover {
+  background: #1ebd5b;
+  transform: translateY(-1px);
+}
+
+.ad-exito-box {
+  text-align: center;
+  padding: 2rem 1rem;
 }
