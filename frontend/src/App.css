@@ -205,6 +205,70 @@ nav ul {
   background: var(--secondary-color);
 }
 
+/* Sugerencias Inteligentes de Búsqueda */
+.sugerencias-banner {
+  margin-top: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-align: left;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.sugerencias-header {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.sugerencias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-sugerencia {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.chip-sugerencia:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.chip-sugerencia i {
+  color: inherit !important;
+  margin: 0 !important;
+  font-size: 0.8rem;
+}
+
+.sugerencia-item {
+  background: #fafbfc;
+  transition: background 0.15s ease;
+}
+
+.sugerencia-item:hover {
+  background: #ecfdf5 !important;
+}
+
 /* Como funciona Carousel */
 .como-funciona-container {
   overflow: hidden;

@@ -12,6 +12,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersLayer = useRef(null);
+  const docsSectionRef = useRef(null);
 
   useEffect(() => {
     const pedir = lugar.tipo === 'estado' ? api.estado : api.municipio;
@@ -21,6 +22,16 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       setCategoriaActiva(null);
     }).catch(() => setDatos(null));
   }, [lugar.tipo, lugar.id]);
+
+  const seleccionarCategoria = (clave) => {
+    const nueva = categoriaActiva === clave ? null : clave;
+    setCategoriaActiva(nueva);
+    if (nueva && docsSectionRef.current) {
+      setTimeout(() => {
+        docsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  };
 
   // Init Map
   useEffect(() => {
@@ -162,7 +173,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
             <button 
               key={s.clave} 
               className={`pill-btn ${categoriaActiva === s.clave ? 'active' : ''}`}
-              onClick={() => setCategoriaActiva(categoriaActiva === s.clave ? null : s.clave)}
+              onClick={() => seleccionarCategoria(s.clave)}
             >
               <i className={iconForSection(s.clave)}></i> {s.nombre}
               <span style={{ background: categoriaActiva === s.clave ? 'rgba(255,255,255,0.2)' : '#f1f2f6', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', marginLeft: '5px' }}>
@@ -175,7 +186,19 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
 
       <div ref={mapRef} className="map-wrapper"></div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginTop: '2rem' }}>
+      <div 
+        ref={docsSectionRef} 
+        id="seccion-documentos" 
+        style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap', 
+          gap: '1rem', 
+          marginTop: '2rem',
+          scrollMarginTop: '90px'
+        }}
+      >
         <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-color)', margin: 0 }}>
           Archivos Disponibles {categoriaActiva && `de ${datos.secciones.find(s=>s.clave===categoriaActiva)?.nombre}`}
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '10px' }}>
