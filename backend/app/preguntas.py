@@ -2,14 +2,15 @@
 
 1. Caché propio: la misma pregunta sobre los mismos documentos se responde una sola vez. Las demás
    personas reciben la respuesta guardada, y si llegan al mismo tiempo esperan a la primera.
+   Vive en memoria y en la tabla `respuestas`, así que sobrevive a los reinicios del servidor.
 2. Pregunta sobre un documento: se manda el documento completo, siempre primero y siempre igual,
    para aprovechar el caché de DeepSeek (la entrada que ya tiene guardada cuesta ~50 veces menos).
 3. Pregunta sobre un lugar o una sección: solo las páginas más relevantes de la búsqueda.
 
 Sin clave, o si la IA falla, se responde con las citas de la búsqueda: la demo nunca se cae.
-El caché vive en memoria: se vacía al reiniciar el servidor.
 """
 
+import hashlib
 import json
 import re
 import sqlite3
@@ -19,6 +20,7 @@ import unicodedata
 from collections import OrderedDict, deque
 
 from .busqueda import buscar_fragmentos, consulta_fts, filtros_sql
+from .db import abrir
 from .procesamiento import llm
 
 MAX_CITAS = 5
@@ -26,6 +28,8 @@ PAGINAS_RELEVANTES = 6
 MAX_CARACTERES_PAGINA = 6_000
 MAX_CARACTERES_DOCUMENTO = 900_000  # ~300k tokens; si es más grande, solo van las páginas relevantes
 MAX_RESPUESTAS = 1_000  # respuestas guardadas en memoria; se descartan las menos usadas
+# Súbelo si cambian las instrucciones de la IA: así no se sirven respuestas guardadas con las anteriores.
+VERSION_RESPUESTAS = 1
 
 NO_ENCONTRE = "No encontré información sobre eso en los documentos cargados."
 
@@ -62,10 +66,20 @@ def normalizar(texto: str) -> str:
     return " ".join(re.findall(r"\w+", sin_acentos.casefold()))
 
 
-def limpiar_cache() -> None:
+def limpiar_cache(tambien_guardadas: bool = True) -> None:
+    """Vacía el caché en memoria y, si se pide, también el de la base (lo usan los tests)."""
     with _candado:
         _respuestas.clear()
         _candados.clear()
+    if tambien_guardadas:
+        con = abrir()
+        try:
+            con.execute("DELETE FROM respuestas")
+            con.commit()
+        except sqlite3.OperationalError:
+            pass
+        finally:
+            con.close()
 
 
 # Qué se le dice a la página sobre el origen de cada respuesta (campo "detalle").
@@ -102,9 +116,9 @@ def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
 
         documento = _documento_completo(con, filtros.get("documento_id"))
         registro["modo"] = "documento completo" if documento else "páginas relevantes"
-        clave = json.dumps([normalizar(pregunta), filtros, _huella(con, filtros)], sort_keys=True)
+        clave = json.dumps([VERSION_RESPUESTAS, normalizar(pregunta), filtros, _huella(con, filtros)], sort_keys=True)
         with _candado_de(clave):  # si 300 personas preguntan lo mismo a la vez, solo la primera llama a la IA
-            guardada = _leer(clave)
+            guardada = _leer(clave) or _leer_de_la_base(con, clave)
             if guardada:
                 registro["origen"] = "caché propio"
                 return {"pregunta": pregunta, **guardada}
@@ -119,6 +133,7 @@ def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
                 return _sin_ia(con, pregunta, filtros, registro)
             registro["origen"] = "DeepSeek" if registro["uso"] else "búsqueda sin resultados"
             _guardar(clave, resultado)
+            _guardar_en_la_base(con, clave, pregunta, resultado)
             return {"pregunta": pregunta, **resultado}
     finally:
         registro["segundos"] = round(time.time() - inicio, 2)
@@ -148,6 +163,34 @@ def _guardar(clave: str, resultado: dict) -> None:
         while len(_respuestas) > MAX_RESPUESTAS:
             viejo, _ = _respuestas.popitem(last=False)
             _candados.pop(viejo, None)
+
+
+def _clave_corta(clave: str) -> str:
+    return hashlib.sha256(clave.encode("utf-8")).hexdigest()
+
+
+def _leer_de_la_base(con: sqlite3.Connection, clave: str) -> dict | None:
+    """Respuesta guardada en la tabla `respuestas` (por ejemplo, de antes de reiniciar el servidor)."""
+    try:
+        fila = con.execute("SELECT respuesta, citas_json FROM respuestas WHERE clave = ?", (_clave_corta(clave),)).fetchone()
+    except sqlite3.OperationalError:  # base vieja sin la tabla: solo caché en memoria
+        return None
+    if fila is None:
+        return None
+    resultado = {"respuesta": fila["respuesta"], "citas": json.loads(fila["citas_json"] or "[]")}
+    _guardar(clave, resultado)
+    return resultado
+
+
+def _guardar_en_la_base(con: sqlite3.Connection, clave: str, pregunta: str, resultado: dict) -> None:
+    try:
+        con.execute(
+            "INSERT OR REPLACE INTO respuestas (clave, pregunta, respuesta, citas_json) VALUES (?, ?, ?, ?)",
+            (_clave_corta(clave), pregunta, resultado["respuesta"], json.dumps(resultado["citas"], ensure_ascii=False)),
+        )
+        con.commit()
+    except sqlite3.Error:  # si no se puede guardar, sigue en memoria
+        pass
 
 
 def _huella(con: sqlite3.Connection, filtros: dict) -> list:
