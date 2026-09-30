@@ -1,3 +1,2 @@
-* text=auto
-.githooks/* text eol=lf
+# Los scripts de shell corren en Linux: siempre con finales de linea LF
 *.sh text eol=lf
