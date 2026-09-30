@@ -100,8 +100,7 @@
 - Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
   columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
   cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.
-- Pendiente de datos (Marko): claves INEGI recorridas en 14 municipios de Guanajuato, 2 municipios de
-  Oaxaca perdidos por nombre repetido y la clave 07125 de Chiapas.
+- Resuelto de datos (Marko): claves INEGI corregidas en Guanajuato (San Miguel 11003 y 34..46 ajustadas), Oaxaca (desambiguados San Juan y San Pedro Mixtepec con distritos) y Chiapas (Honduras de la Sierra 07125 sin duplicados). Catálogo de 2,475 municipios 100% verificado.
 
 ## Para retomar en una sesión nueva (léelo primero)
 
