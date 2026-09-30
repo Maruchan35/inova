@@ -9,6 +9,8 @@ const DEFAULT_CENTER = [23.6345, -102.5528]; // México
 export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onContexto, onIr }) {
   const [datos, setDatos] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [origenDoc, setOrigenDoc] = useState('todos'); // 'todos', 'municipales', 'estatales'
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersLayer = useRef(null);
@@ -73,13 +75,6 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       }
     }
   }, [datos]);
-
-
-
-  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
-
-  const [filtroTexto, setFiltroTexto] = useState('');
-  const [origenDoc, setOrigenDoc] = useState('todos'); // 'todos', 'municipales', 'estatales'
 
   if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
 

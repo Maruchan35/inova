@@ -1,10 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
 import { api } from './api.js';
 import Portada from './components/Portada.jsx';
 import Lugar from './components/Lugar.jsx';
 import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ textAlign: 'center', padding: '4rem 1.5rem', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#e67e22' }}>
+            <i className="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h2 style={{ color: 'var(--primary-color)', marginBottom: '0.8rem' }}>No pudimos cargar esta sección</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            {this.state.error?.message || 'Ocurrió un error inesperado al procesar la información.'}
+          </p>
+          <button 
+            className="search-btn" 
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.href = '/';
+            }}
+          >
+            <i className="fa-solid fa-house" style={{ marginRight: '8px' }}></i> Volver al Inicio
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -101,7 +142,9 @@ export default function App() {
       <PaginaModal pagina={pagina} onClose={() => setPagina(null)} onVerPagina={verPagina} />
 
       <main>
-        {content}
+        <ErrorBoundary>
+          {content}
+        </ErrorBoundary>
       </main>
 
       <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
