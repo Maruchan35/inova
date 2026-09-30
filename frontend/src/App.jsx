@@ -10,6 +10,7 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [pagina, setPagina] = useState(null);
   const [chatbotAbierto, setChatbotAbierto] = useState(false);
+  const [contexto, setContexto] = useState('todos los documentos'); // sobre qué pregunta el chatbot
 
   useEffect(() => {
     const handlePopState = () => setCurrentPath(window.location.pathname);
@@ -22,16 +23,20 @@ export default function App() {
     setCurrentPath(path);
   };
 
-  const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina);
+  const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina).catch(() => {});
 
   let content = null;
   let chatbotFiltros = {};
   const isDocumento = currentPath.startsWith('/documento/');
   const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
 
+  useEffect(() => {
+    if (!isDocumento && !isLugar) setContexto('todos los documentos');
+  }, [isDocumento, isLugar]);
+
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
-    content = <Documento id={id} onVerPagina={verPagina} />;
+    content = <Documento id={id} onVerPagina={verPagina} onIr={navigate} onContexto={setContexto} />;
     chatbotFiltros = { documento_id: id };
   } else if (isLugar) {
     const partes = currentPath.split('/');
@@ -41,7 +46,9 @@ export default function App() {
       <Lugar 
         lugar={{ tipo, id }} 
         onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} 
-        onDocumento={(dId) => navigate(`/documento/${dId}`)} 
+        onDocumento={(dId) => navigate(`/documento/${dId}`)}
+        onContexto={setContexto}
+        onIr={navigate} 
         onVerPagina={verPagina} 
       />
     );
@@ -91,13 +98,13 @@ export default function App() {
         </nav>
       </header>
 
-      <PaginaModal pagina={pagina} onClose={() => setPagina(null)} />
+      <PaginaModal pagina={pagina} onClose={() => setPagina(null)} onVerPagina={verPagina} />
 
       <main>
         {content}
       </main>
 
-      <Chatbot filtros={chatbotFiltros} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
+      <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>
         <p>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</p>

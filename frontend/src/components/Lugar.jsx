@@ -6,7 +6,7 @@ import Suscripcion from './Suscripcion.jsx';
 // Coordenadas base por defecto si no hay
 const DEFAULT_CENTER = [23.6345, -102.5528]; // México
 
-export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
+export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onContexto, onIr }) {
   const [datos, setDatos] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
   const mapRef = useRef(null);
@@ -17,6 +17,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
     const pedir = lugar.tipo === 'estado' ? api.estado : api.municipio;
     pedir(lugar.id).then(d => {
       setDatos(d);
+      onContexto?.(d.nombre + (d.estado ? `, ${d.estado.nombre}` : ''));
       setCategoriaActiva(null);
     }).catch(() => setDatos(null));
   }, [lugar.tipo, lugar.id]);
@@ -91,6 +92,11 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
 
   return (
     <div className="lugar-container">
+      <nav className="migas">
+        <button className="btn-link" onClick={() => onIr('/')}>Inicio</button>
+        {datos.estado && <> / <button className="btn-link" onClick={() => onElegir({ tipo: 'estado', id: datos.estado.id })}>{datos.estado.nombre}</button></>}
+        {' '}/ {datos.nombre}
+      </nav>
       <div className="lugar-header">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)' }}></i> {locationName}
@@ -145,6 +151,17 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
             Ver todos los archivos
           </button>
         </div>
+      )}
+
+      {datos.municipios?.length > 0 && (
+        <section className="municipios-lista">
+          <h3>Municipios de {datos.nombre}</h3>
+          <div>
+            {datos.municipios.map(m => (
+              <button key={m.id} className="pill-btn" onClick={() => onElegir({ tipo: 'municipio', id: m.id })}>{m.nombre}</button>
+            ))}
+          </div>
+        </section>
       )}
 
       <Concentracion filtros={filtros} locationName={locationName} />

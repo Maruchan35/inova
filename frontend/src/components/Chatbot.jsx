@@ -2,7 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 import { api } from '../api.js';
 import Fragmento from './Fragmento.jsx';
 
-export default function Chatbot({ filtros, onVerPagina, abiertoPorDefecto, onCerrar }) {
+// Debajo de cada respuesta: de dónde salió (IA, caché o sin IA), cuánto tardó y cuánto costó.
+function describirOrigen(detalle) {
+  if (!detalle) return null;
+  const costo = detalle.costo_usd ? ` · $${detalle.costo_usd.toFixed(4)} USD` : '';
+  switch (detalle.origen) {
+    case 'ia': return `Respondió la IA (DeepSeek) en ${detalle.segundos} s${costo}`;
+    case 'cache': return 'Respuesta guardada: alguien ya lo había preguntado · al instante · $0';
+    case 'sin_resultados': return 'No encontré páginas relacionadas con tu pregunta.';
+    default: return detalle.motivo || 'La IA no está disponible en este momento.';
+  }
+}
+
+export default function Chatbot({ filtros, contexto, onVerPagina, abiertoPorDefecto, onCerrar }) {
   const [open, setOpen] = useState(false);
   const [pregunta, setPregunta] = useState('');
   const [mensajes, setMensajes] = useState([{
@@ -11,6 +23,15 @@ export default function Chatbot({ filtros, onVerPagina, abiertoPorDefecto, onCer
   }]);
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef(null);
+  const contextoAnterior = useRef(contexto);
+
+  // Si cambias de página, el chatbot avisa sobre qué preguntas ahora.
+  useEffect(() => {
+    if (contexto && contexto !== contextoAnterior.current) {
+      contextoAnterior.current = contexto;
+      setMensajes(prev => prev.length > 1 ? [...prev, { tipo: 'aviso', texto: `Ahora preguntas sobre: ${contexto}` }] : prev);
+    }
+  }, [contexto]);
 
   useEffect(() => {
     if (abiertoPorDefecto) {
@@ -47,25 +68,32 @@ export default function Chatbot({ filtros, onVerPagina, abiertoPorDefecto, onCer
       {open && (
         <div className="chat-window">
           <div className="chat-header">
-            <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
+            <div>
+              <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
+              {contexto && <small className="chat-contexto">Preguntando sobre: {contexto}</small>}
+            </div>
             <i className="fa-solid fa-xmark close-btn" onClick={() => { setOpen(false); if (onCerrar) onCerrar(); }} style={{ cursor: 'pointer' }}></i>
           </div>
           <div className="chat-messages" ref={bodyRef}>
             {mensajes.map((m, i) => (
+              m.tipo === 'aviso' ? <p key={i} className="chat-aviso">{m.texto}</p> :
               <div key={i} className={`msg-bubble ${m.tipo === 'bot' ? 'msg-bot' : 'msg-user'}`}>
                 {m.texto && <p>{m.texto}</p>}
                 {m.error && <p className="error">{m.error}</p>}
                 {m.resultado && (
                   <div>
                     <p>{m.resultado.respuesta}</p>
-                    {m.resultado.citas.map(c => (
-                      <div key={`${c.documento_id}-${c.pagina}`} className="cita">
+                    {m.resultado.citas.map((c, j) => (
+                      <div key={j} className="cita">
                         <button className="btn-link" onClick={() => onVerPagina(c.documento_id, c.pagina)}>
                           <strong>{c.documento_titulo}</strong> · pág. {c.pagina} ({c.lugar})
                         </button>
                         <p><Fragmento texto={c.fragmento} /></p>
                       </div>
                     ))}
+                    {describirOrigen(m.resultado.detalle) && (
+                      <p className={`chat-origen origen-${m.resultado.detalle.origen}`}>{describirOrigen(m.resultado.detalle)}</p>
+                    )}
                   </div>
                 )}
               </div>
