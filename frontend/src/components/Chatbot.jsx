@@ -35,6 +35,16 @@ function historialDe(mensajes) {
 }
 
 // Tamaño de la ventana del chat: se puede ampliar con un botón o arrastrando su esquina, y se recuerda.
+// Frases del globo junto al botón del chat: van cambiando para invitar a preguntarle a la IA.
+const FRASES = [
+  'Hola, soy una IA. ¿En qué te puedo ayudar?',
+  '¿Te interesa algo en especial?',
+  'Pregúntame por el presupuesto de tu municipio',
+  '¿Buscas una obra, un contrato o un informe?',
+  'Te digo de qué página sale cada dato',
+  'También me puedes preguntar hablando',
+];
+
 const TAM_NORMAL = { ancho: 440, alto: 600 };
 const TAM_GRANDE = { ancho: 860, alto: 2000 };
 
@@ -64,6 +74,24 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
   }]);
   const [cargando, setCargando] = useState(false);
   const [sugeridas, setSugeridas] = useState([]);
+  const [frase, setFrase] = useState(0);
+  const frases = vozDisponible ? FRASES : FRASES.slice(0, -1); // la última habla del micrófono
+  const [globoCerrado, setGloboCerrado] = useState(() => {
+    try { return sessionStorage.getItem('chat-globo') === 'cerrado'; } catch (e) { return false; }
+  });
+
+  // El globo cambia de frase cada 5 segundos mientras el chat está cerrado.
+  useEffect(() => {
+    if (open || globoCerrado) return;
+    const reloj = setInterval(() => setFrase(n => (n + 1) % frases.length), 5000);
+    return () => clearInterval(reloj);
+  }, [open, globoCerrado]);
+
+  function cerrarGlobo(e) {
+    e.stopPropagation();
+    setGloboCerrado(true);
+    try { sessionStorage.setItem('chat-globo', 'cerrado'); } catch (err) {}
+  }
   const bodyRef = useRef(null);
   const contextoAnterior = useRef(contexto);
 
@@ -154,6 +182,15 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
 
   return (
     <div className="chatbot-container">
+      {!open && !globoCerrado && (
+        <div className="chat-globo" onClick={() => setOpen(true)} role="button" title="Abrir el asistente de IA">
+          <i className="fa-solid fa-wand-magic-sparkles"></i>
+          <span key={frase} className="chat-globo-texto">{frases[frase % frases.length]}</span>
+          <button className="chat-globo-cerrar" onClick={cerrarGlobo} aria-label="Ocultar este mensaje">
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      )}
       <div className="chat-toggle" onClick={() => { setOpen(!open); if (open && onCerrar) onCerrar(); }}>
         <i className={open ? "fa-solid fa-xmark" : "fa-regular fa-message"}></i>
       </div>
