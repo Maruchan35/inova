@@ -91,14 +91,20 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
   const esMunicipio = lugar.tipo === 'municipio';
   let todosDocs = [];
 
-  // Documentos propios
+  // Documentos directos del nivel actual
   datos.secciones.forEach(s => {
     s.documentos.forEach(d => {
-      todosDocs.push({ ...d, seccionClave: s.clave, seccionNombre: s.nombre, esEstatal: false, origenTexto: 'Municipal' });
+      todosDocs.push({
+        ...d,
+        seccionClave: s.clave,
+        seccionNombre: s.nombre,
+        esEstatal: !esMunicipio,
+        origenTexto: esMunicipio ? 'Municipal' : 'Nivel Estatal'
+      });
     });
   });
 
-  // Documentos estatales aplicables al municipio (si aplica)
+  // Si es municipio: incorporar decretos y reportes estatales aplicables
   if (esMunicipio && datos.documentos_estatales) {
     datos.documentos_estatales.forEach(s => {
       s.documentos.forEach(d => {
@@ -113,14 +119,30 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
     });
   }
 
+  // Si es estado: incorporar expedientes de todos sus municipios para visión integral
+  if (!esMunicipio && datos.documentos_municipales) {
+    datos.documentos_municipales.forEach(s => {
+      s.documentos.forEach(d => {
+        todosDocs.push({
+          ...d,
+          seccionClave: s.clave,
+          seccionNombre: s.nombre,
+          esEstatal: false,
+          esMunicipal: true,
+          origenTexto: d.municipio_nombre || 'Municipio'
+        });
+      });
+    });
+  }
+
   // 2. Filtrado por categoría activa, origen (municipal/estatal) y búsqueda por texto
   let docsToShow = todosDocs;
   if (categoriaActiva) {
     docsToShow = docsToShow.filter(d => d.seccionClave === categoriaActiva);
   }
-  if (esMunicipio && origenDoc === 'municipales') {
+  if (origenDoc === 'municipales') {
     docsToShow = docsToShow.filter(d => !d.esEstatal);
-  } else if (esMunicipio && origenDoc === 'estatales') {
+  } else if (origenDoc === 'estatales') {
     docsToShow = docsToShow.filter(d => d.esEstatal);
   }
   if (filtroTexto.trim()) {
@@ -129,7 +151,8 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       (d.titulo && d.titulo.toLowerCase().includes(q)) ||
       (d.dependencia && d.dependencia.toLowerCase().includes(q)) ||
       (d.anio && String(d.anio).includes(q)) ||
-      (d.seccionNombre && d.seccionNombre.toLowerCase().includes(q))
+      (d.seccionNombre && d.seccionNombre.toLowerCase().includes(q)) ||
+      (d.origenTexto && d.origenTexto.toLowerCase().includes(q))
     );
   }
 
@@ -207,8 +230,8 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
           </span>
         </h3>
 
-        {esMunicipio && (
-          <div style={{ display: 'flex', gap: '8px' }}>
+        {esMunicipio ? (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button 
               className={`pill-btn ${origenDoc === 'todos' ? 'active' : ''}`}
               style={{ padding: '6px 14px', fontSize: '0.85rem' }}
@@ -231,6 +254,30 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
               Estatales aplicables ({todosDocs.filter(d => d.esEstatal).length})
             </button>
           </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button 
+              className={`pill-btn ${origenDoc === 'todos' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('todos')}
+            >
+              Todo {datos.nombre} ({todosDocs.length})
+            </button>
+            <button 
+              className={`pill-btn ${origenDoc === 'estatales' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('estatales')}
+            >
+              Nivel Estatal ({todosDocs.filter(d => d.esEstatal).length})
+            </button>
+            <button 
+              className={`pill-btn ${origenDoc === 'municipales' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('municipales')}
+            >
+              Municipios ({todosDocs.filter(d => !d.esEstatal).length})
+            </button>
+          </div>
         )}
       </div>
 
@@ -240,7 +287,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
           type="text" 
           value={filtroTexto} 
           onChange={e => setFiltroTexto(e.target.value)} 
-          placeholder="Filtrar por título, año, secretaría..."
+          placeholder="Filtrar por título, municipio, año, secretaría..."
         />
         {filtroTexto && (
           <button type="button" onClick={() => setFiltroTexto('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 12px', color: '#888' }}>
@@ -267,7 +314,18 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
             <div key={d.id} className="doc-card" style={{ borderLeft: d.esEstatal ? '4px solid #6c5ce7' : '4px solid var(--accent-color)' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '5px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', background: d.esEstatal ? '#f0eeff' : '#eaf8f0', color: d.esEstatal ? '#6c5ce7' : '#10b981' }}>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600, 
+                    padding: '2px 8px', 
+                    borderRadius: '6px', 
+                    background: d.esEstatal ? '#f0eeff' : '#eaf8f0', 
+                    color: d.esEstatal ? '#6c5ce7' : '#059669',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <i className={d.esEstatal ? "fa-solid fa-building-columns" : "fa-solid fa-location-dot"}></i>
                     {d.origenTexto}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

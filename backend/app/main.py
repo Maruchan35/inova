@@ -44,6 +44,27 @@ def _secciones_con_documentos(con: Con, estado_id: int, municipio_id: int | None
     return secciones
 
 
+def _secciones_municipales_de_estado(con: Con, estado_id: int) -> list[dict]:
+    secciones = [dict(s) for s in con.execute("SELECT id, clave, nombre FROM secciones ORDER BY orden")]
+    documentos = con.execute(
+        """
+        SELECT d.id, d.seccion_id, d.titulo, d.anio, d.fecha, d.total_paginas, d.estatus,
+               d.url_fuente, d.formato, d.dependencia, d.municipio_id, m.nombre AS municipio_nombre
+        FROM documentos d
+        JOIN municipios m ON m.id = d.municipio_id
+        WHERE d.estado_id = ? AND d.municipio_id IS NOT NULL
+        ORDER BY m.nombre ASC, COALESCE(d.anio, 0) DESC, d.id DESC
+        """,
+        (estado_id,),
+    ).fetchall()
+    for s in secciones:
+        s["documentos"] = [
+            {k: d[k] for k in d.keys() if k != "seccion_id"} for d in documentos if d["seccion_id"] == s["id"]
+        ]
+        del s["id"]
+    return secciones
+
+
 @app.get("/api/salud")
 def salud():
     return {"estado": "ok"}
@@ -78,6 +99,7 @@ def ver_estado(estado_id: int, con: Con = Depends(conectar)):
         **dict(estado),
         "municipios": [dict(m) for m in municipios],
         "secciones": _secciones_con_documentos(con, estado_id, None),
+        "documentos_municipales": _secciones_municipales_de_estado(con, estado_id),
     }
 
 
