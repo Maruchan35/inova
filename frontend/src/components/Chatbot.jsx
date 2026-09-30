@@ -15,12 +15,12 @@ function describirOrigen(detalle) {
   }
 }
 
-export default function Chatbot({ filtros, contexto, onVerPagina, abiertoPorDefecto, onCerrar }) {
+export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoPorDefecto, onCerrar }) {
   const [open, setOpen] = useState(false);
   const [pregunta, setPregunta] = useState('');
   const [mensajes, setMensajes] = useState([{
     tipo: 'bot',
-    texto: '¡Hola! Soy el asistente RAG de CabildoAbierto. Puedo leer contratos, presupuestos y auditorías por ti. ¿Sobre qué obra te gustaría consultar hoy?'
+    texto: '¡Hola! Pregúntame por los documentos oficiales de cualquier estado o municipio: un informe, un presupuesto, una obra o un contrato. Cada dato te lo doy con la página de donde sale.'
   }]);
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef(null);
@@ -92,6 +92,21 @@ export default function Chatbot({ filtros, contexto, onVerPagina, abiertoPorDefe
                         <p><Fragmento texto={c.fragmento} /></p>
                       </div>
                     ))}
+                    {m.resultado.documentos?.length > 0 && (
+                      <div className="chat-documentos">
+                        <strong>Documentos relacionados</strong>
+                        {m.resultado.documentos.map(d => (
+                          <button key={d.id} className="btn-link" onClick={() => onIr?.(`/documento/${d.id}`)}>
+                            {d.titulo} <span>· {d.lugar}{d.anio ? ` · ${d.anio}` : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {m.resultado.detalle?.entendido && (m.resultado.detalle.entendido.lugar || m.resultado.detalle.entendido.seccion) && (
+                      <p className="chat-entendido">
+                        Entendí: {[m.resultado.detalle.entendido.lugar, m.resultado.detalle.entendido.seccion].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     {describirOrigen(m.resultado.detalle) && (
                       <p className={`chat-origen origen-${m.resultado.detalle.origen}`}>{describirOrigen(m.resultado.detalle)}</p>
                     )}

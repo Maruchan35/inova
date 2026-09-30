@@ -91,6 +91,12 @@
   todas las palabras importantes y luego con alguna; el chatbot no busca el nombre del lugar ya filtrado.
   `cargar.py`: `--procesos N` (varios núcleos), `--omitir-escaneados` (lista en `pendientes_ocr.txt`), salta
   archivos repetidos por sha256; `cryptography` para PDFs encriptados.
+- **El chatbot entiende la pregunta** (`backend/app/entender.py`): lugar (estados con alias como CDMX, edomex,
+  NL; municipios de nombre único), sección (informes, presupuesto, obras, actas, contratos) y si pide un
+  **panorama** ("háblame del informe de…", "qué dice el presupuesto…") o un **dato**. El lugar que dice la pregunta
+  gana sobre la página. Primero elige documentos (título + páginas que tratan el tema) y luego:
+  panorama → explica el documento con su inicio y sus páginas del tema (si hay varios parecidos, dice cuáles);
+  dato → busca dentro de esos documentos. La respuesta trae `documentos` y `detalle.entendido`.
 - Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
   columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
   cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.

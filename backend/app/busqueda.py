@@ -21,7 +21,8 @@ def _sin_acentos(palabra: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", palabra.lower()) if not unicodedata.combining(c))
 
 
-def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None, municipio_y_su_estado=None):
+def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None, municipio_y_su_estado=None,
+                documento_ids=None):
     """Condiciones WHERE opcionales sobre documentos (d) y secciones (s).
 
     `municipio_y_su_estado`: los documentos del municipio y los estatales de su estado (el chatbot pregunta así:
@@ -31,6 +32,9 @@ def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=No
         condiciones.append("(d.municipio_id = ? OR (d.municipio_id IS NULL AND "
                            "d.estado_id = (SELECT estado_id FROM municipios WHERE id = ?)))")
         params += [municipio_y_su_estado, municipio_y_su_estado]
+    if documento_ids:
+        condiciones.append(f"d.id IN ({', '.join('?' * len(documento_ids))})")
+        params += list(documento_ids)
     for valor, sql in (
         (estado_id, "d.estado_id = ?"),
         (municipio_id, "d.municipio_id = ?"),

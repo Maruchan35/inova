@@ -98,6 +98,9 @@ mismo formato que los resultados de `/buscar`.
 La respuesta la genera DeepSeek a partir de los documentos (con caché). Además trae `detalle`:
 `{ "origen": "ia" | "cache" | "sin_ia" | "sin_resultados", "segundos": 1.8, "costo_usd": 0.0008, "motivo": null }`
 para mostrar de dónde salió cada respuesta (`motivo` explica cuando no se pudo usar la IA).
+`detalle.entendido` dice qué entendió de la pregunta: `{ "lugar": "Ciudad de México", "seccion": "Informes de gobierno",
+"tipo": "panorama" | "dato" }` (el lugar o la sección que dice la pregunta ganan sobre los filtros). Y `documentos`
+trae hasta 5 documentos relacionados: `[{ "id": 311, "titulo": "…", "anio": 2025, "lugar": "Ciudad de México", "seccion": "informes" }]`.
 
 ### Avisos por WhatsApp
 
