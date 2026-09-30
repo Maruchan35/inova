@@ -4,9 +4,14 @@
     python resumir.py --muestra 3     # resume 3 documentos al azar y muestra el resultado, sin guardar
     python resumir.py                 # todos los que falten (se puede interrumpir y retomar)
     python resumir.py --max-caracteres 60000   # lee menos de cada documento: más barato
+    python resumir.py --reserva 3     # se detiene cuando queden menos de 3 dólares en DeepSeek (2 por defecto)
 
 Por defecto lee hasta 120 mil caracteres de cada documento (las primeras ~40-60 páginas, una sola llamada a la IA):
 todo el texto de los 1,454 documentos cuesta ~$7 USD fuera de hora pico; con el tope, ~$3.
+
+Trabaja en lotes de 25 y antes de cada lote consulta el saldo de DeepSeek: si queda menos que la reserva, se
+detiene, para que el chatbot no se quede sin IA. Empieza por los documentos del gobierno de cada estado y por los
+más recientes, que son los que más se consultan.
 
 Usa el texto que ya está en la base (no vuelve a leer los PDF). Un documento tiene resumen automático cuando
 sus puntos clave son fragmentos ("…texto…") o no tiene puntos. El avance queda en
@@ -28,6 +33,7 @@ from app.procesamiento.resumen import resumir_con_ia
 
 RAIZ = Path(__file__).resolve().parents[1]
 AVANCE = RAIZ / "documentos" / "_catalogo" / "resumidos.json"
+LOTE = 25
 
 
 def pendientes(con, hechos: set) -> list[dict]:
@@ -37,6 +43,7 @@ def pendientes(con, hechos: set) -> list[dict]:
         WHERE d.estatus = 'listo' AND d.titulo NOT LIKE '%(ejemplo)%'
           AND (NOT EXISTS (SELECT 1 FROM puntos_clave p WHERE p.documento_id = d.id)
                OR EXISTS (SELECT 1 FROM puntos_clave p WHERE p.documento_id = d.id AND p.texto LIKE '…%'))
+        ORDER BY d.municipio_id IS NULL DESC, COALESCE(d.anio, 0) DESC, d.id
         """
     ).fetchall()
     return [dict(f) for f in filas if f["id"] not in hechos]
@@ -65,6 +72,7 @@ def main() -> int:
     parser.add_argument("--muestra", type=int, default=0)
     parser.add_argument("--hilos", type=int, default=4)
     parser.add_argument("--max-caracteres", type=int, default=120_000)
+    parser.add_argument("--reserva", type=float, default=2.0, help="dólares que se dejan en DeepSeek para el chatbot")
     args = parser.parse_args()
     if not llm.configurado():
         print("Falta DEEPSEEK_API_KEY en backend/.env")
@@ -80,38 +88,48 @@ def main() -> int:
     print(f"{len(docs)} documentos por resumir ({len(hechos)} ya hechos) · {args.hilos} a la vez", flush=True)
     inicio, uso_total, hechos_ahora, fallas = time.time(), {}, 0, 0
     with ThreadPoolExecutor(max_workers=args.hilos) as grupo:
-        tareas = {grupo.submit(resumir, d, args.max_caracteres): d for d in docs}
-        for n, tarea in enumerate(as_completed(tareas), start=1):
-            doc = tareas[tarea]
-            try:
-                resumen, puntos, uso = tarea.result()
-            except Exception as e:  # la IA falló o no dio puntos con página válida: se queda el automático
-                fallas += 1
-                print(f"  [{doc['id']}] no se pudo resumir: {type(e).__name__}: {str(e)[:120]}", flush=True)
-                if "402" in str(e):  # sin saldo en DeepSeek: no tiene caso seguir
-                    print("DeepSeek no tiene saldo (402). Recarga y vuelve a correr: sigue donde se quedó.", flush=True)
-                    grupo.shutdown(wait=False, cancel_futures=True)
-                    break
-                continue
-            for k, v in uso.items():
-                uso_total[k] = uso_total.get(k, 0) + v
-            if resumen is None:
-                continue
-            if args.muestra:
-                print(f"\n[{doc['id']}] {doc['titulo']}\n  {resumen}\n" +
-                      "\n".join(f"  • {p['texto']} (pág. {p['pagina']})" for p in puntos))
-                continue
-            con.execute("UPDATE documentos SET resumen = ? WHERE id = ?", (resumen, doc["id"]))
-            con.execute("DELETE FROM puntos_clave WHERE documento_id = ?", (doc["id"],))
-            con.executemany("INSERT INTO puntos_clave (documento_id, orden, texto, pagina) VALUES (?, ?, ?, ?)",
-                            [(doc["id"], i, p["texto"], p["pagina"]) for i, p in enumerate(puntos, start=1)])
-            con.commit()
-            hechos.add(doc["id"])
-            hechos_ahora += 1
-            if n % 25 == 0 or n == len(docs):
+        for desde in range(0, len(docs), LOTE):
+            saldo = llm.saldo()
+            if saldo is not None and saldo < args.reserva:
+                print(f"Quedan ${saldo:.2f} USD en DeepSeek: se detiene para dejarle ${args.reserva:.2f} al chatbot. "
+                      "Recarga y vuelve a correr: sigue donde se quedó.", flush=True)
+                break
+            # Un lote a la vez: al detenerse no queda ningún resumen pagado sin guardar.
+            tareas = {grupo.submit(resumir, d, args.max_caracteres): d for d in docs[desde:desde + LOTE]}
+            sin_saldo = False
+            for tarea in as_completed(tareas):
+                doc = tareas[tarea]
+                try:
+                    resumen, puntos, uso = tarea.result()
+                except Exception as e:  # la IA falló o no dio puntos con página válida: se queda el automático
+                    fallas += 1
+                    sin_saldo = sin_saldo or "402" in str(e)
+                    if isinstance(e, ValueError):  # la IA respondió, pero sin puntos con página válida:
+                        hechos.add(doc["id"])      # no se vuelve a pagar por él en la siguiente corrida
+                    print(f"  [{doc['id']}] no se pudo resumir: {type(e).__name__}: {str(e)[:120]}", flush=True)
+                    continue
+                for k, v in uso.items():
+                    uso_total[k] = uso_total.get(k, 0) + v
+                if resumen is None:
+                    continue
+                if args.muestra:
+                    print(f"\n[{doc['id']}] {doc['titulo']}\n  {resumen}\n" +
+                          "\n".join(f"  • {p['texto']} (pág. {p['pagina']})" for p in puntos))
+                    continue
+                con.execute("UPDATE documentos SET resumen = ? WHERE id = ?", (resumen, doc["id"]))
+                con.execute("DELETE FROM puntos_clave WHERE documento_id = ?", (doc["id"],))
+                con.executemany("INSERT INTO puntos_clave (documento_id, orden, texto, pagina) VALUES (?, ?, ?, ?)",
+                                [(doc["id"], i, p["texto"], p["pagina"]) for i, p in enumerate(puntos, start=1)])
+                con.commit()
+                hechos.add(doc["id"])
+                hechos_ahora += 1
+            if not args.muestra:
                 AVANCE.write_text(json.dumps(sorted(hechos)), encoding="utf-8")
-                print(f"  {n}/{len(docs)} · {hechos_ahora} resumidos · ${llm.costo_usd(uso_total):.3f} USD · "
-                      f"{time.time() - inicio:.0f} s", flush=True)
+                print(f"  {min(desde + LOTE, len(docs))}/{len(docs)} · {hechos_ahora} resumidos · "
+                      f"${llm.costo_usd(uso_total):.3f} USD · {time.time() - inicio:.0f} s", flush=True)
+            if sin_saldo:  # sin saldo en DeepSeek: no tiene caso seguir
+                print("DeepSeek no tiene saldo (402). Recarga y vuelve a correr: sigue donde se quedó.", flush=True)
+                break
     con.close()
     print(f"\nTerminado: {hechos_ahora} resumidos, {fallas} sin resumir, en {time.time() - inicio:.0f} s · "
           f"costo aprox. ${llm.costo_usd(uso_total):.3f} USD (precio de hora pico; fuera de ella es la mitad)")

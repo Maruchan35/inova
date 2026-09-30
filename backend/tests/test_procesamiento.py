@@ -165,3 +165,23 @@ def test_llm_reintenta_si_deepseek_dice_que_vamos_muy_rapido(monkeypatch):
     monkeypatch.setattr(llm.httpx, "post", lambda url, headers, json, timeout: Respuesta())
     monkeypatch.setattr(llm.time, "sleep", lambda s: None)
     assert llm.pedir_json("s", "u", {}) == {"ok": True} and estados == []
+
+
+def test_llm_consulta_el_saldo_y_no_truena_si_no_puede(monkeypatch):
+    class Respuesta:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"is_available": True, "balance_infos": [{"currency": "CNY", "total_balance": "9.00"},
+                                                            {"currency": "USD", "total_balance": "6.69"}]}
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "clave-de-prueba")
+    monkeypatch.setattr(llm.httpx, "get", lambda url, headers, timeout: Respuesta())
+    assert llm.saldo() == 6.69
+
+    def sin_red(url, headers, timeout):
+        raise OSError("sin red")
+
+    monkeypatch.setattr(llm.httpx, "get", sin_red)
+    assert llm.saldo() is None
