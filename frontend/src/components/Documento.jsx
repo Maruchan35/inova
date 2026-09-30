@@ -2,57 +2,23 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api.js';
 
 /**
- * Limpia fragmentos cortados y caracteres OCR residuales de un punto clave.
+ * Limpia fragmentos cortados y caracteres OCR residuales al inicio y final de un punto clave,
+ * asegurando que la oración inicie con mayúscula y sea completamente legible de corrido.
  */
 function cleanPuntoText(texto) {
   if (!texto) return '';
-  let s = texto.replace(/\ufffd/g, '');
-  // Quitar elipsis, comas o restos numéricos huérfanos al inicio (p. ej. "...s ", "...,030,308")
+  let s = texto.replace(/\ufffd/g, '').trim();
+  // Quitar elipsis, comas o restos numéricos huérfanos al inicio (ej. "...s ", "...,030,308")
   s = s.replace(/^[….\s,-]+(?:\d+[,.\d]*)?\s*/, '');
-  // Quitar letras sueltas huérfanas al inicio de corte (p. ej. "...s ", "...o ")
-  s = s.replace(/^[….\s,-]*[a-zA-ZáéíóúÁÉÍÓÚñÑ]{1,2}\s+/, '');
+  // Quitar letras sueltas huérfanas al inicio de corte (ej. "...r, ", "...s ", "...cias ")
+  s = s.replace(/^[….\s,-]*[a-zA-ZáéíóúÁÉÍÓÚñÑ]{1,3}[,.\s-]+/, '');
   // Quitar elipsis o símbolos al final
   s = s.replace(/[….\s,-]+$/, '');
-  return s.trim();
-}
-
-/**
- * Detecta y extrae conceptos contables/financieros y sus cifras para presentarlos en tarjetas estructuradas.
- */
-function extractFinancialMetrics(texto) {
-  const cleaned = cleanPuntoText(texto);
-  // Busca: (Concepto en mayúsculas/título) seguido de (1 a 4 cifras/porcentajes)
-  const regex = /([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚáéíóúñÑ0-9\s()\/.-]{2,40}?)\s+((?:-?[\d,.]+%?\s*){1,4})(?=(?:[A-ZÁÉÍÓÚÑ]|$))/g;
-  const metrics = [];
-  let match;
-
-  while ((match = regex.exec(cleaned)) !== null) {
-    const concept = match[1].trim();
-    const rawVals = match[2].trim().split(/\s+/).filter(Boolean);
-    const hasFinancialNumber = rawVals.some(v => v.includes(',') || v.includes('%') || v.length >= 4);
-
-    if (hasFinancialNumber && concept.length >= 3) {
-      metrics.push({
-        concepto: concept,
-        cifras: rawVals.map(val => {
-          const isPercent = val.endsWith('%');
-          const isNegative = val.startsWith('-');
-          return {
-            raw: val,
-            isPercent,
-            isNegative,
-            display: isPercent
-              ? val
-              : /^-?[\d,]+(?:\.\d+)?$/.test(val) && (val.includes(',') || val.length >= 4)
-              ? (isNegative ? `-$${val.replace('-', '')}` : `$${val}`)
-              : val
-          };
-        })
-      });
-    }
+  // Asegurar mayúscula inicial
+  if (s.length > 0) {
+    s = s.charAt(0).toUpperCase() + s.slice(1);
   }
-
-  return { cleaned, metrics };
+  return s.trim();
 }
 
 export default function Documento({ id, onVerPagina, onIr, onContexto }) {
@@ -68,7 +34,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
         setError(null);
         onContexto?.(d.titulo);
         if (d.estatus !== 'listo' && d.estatus !== 'error') {
-          interval = setTimeout(fetchDoc, 2000); // Polling every 2s
+          interval = setTimeout(fetchDoc, 2000); // Polling cada 2s
         }
       } catch (err) {
         setDoc(null);
@@ -79,15 +45,13 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
     return () => clearTimeout(interval);
   }, [id, onContexto]);
 
-  // Procesar puntos clave para presentación estructurada
+  // Procesar puntos clave para lectura fluida y completa
   const puntosProcesados = useMemo(() => {
     if (!doc?.puntos_clave) return [];
     return doc.puntos_clave.map((p) => {
-      const { cleaned, metrics } = extractFinancialMetrics(p.texto);
       return {
         ...p,
-        textoLimpio: cleaned,
-        metrics
+        textoLimpio: cleanPuntoText(p.texto)
       };
     });
   }, [doc?.puntos_clave]);
@@ -169,7 +133,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
           </div>
           <div className="doc-fuente-actions">
             {doc.total_paginas > 0 && (
-              <button className="btn-pag-nav" onClick={() => onVerPagina(doc.id, 1)} title="Abrir visor de páginas">
+              <button className="btn-pag-nav" onClick={() => onVerPagina(doc.id, 1)} title="Abrir visor interactivo">
                 <i className="fa-solid fa-table-cells"></i> Abrir visor interactivo
               </button>
             )}
@@ -229,7 +193,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
               </div>
             </div>
 
-            {/* Cuerpo del Resumen */}
+            {/* Cuerpo del Resumen sin saltos bruscos */}
             <div className="doc-resumen-body">
               {esResumenFallback ? (
                 <p className="doc-resumen-desc">
@@ -241,7 +205,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
             </div>
           </div>
 
-          {/* Desglose de Puntos Clave y Cifras Extraídas */}
+          {/* Desglose de Puntos Clave Extraídos */}
           <div className="doc-section-card" style={{ marginTop: '2rem' }}>
             <div className="doc-section-header-row">
               <h3 className="doc-section-title">
@@ -254,7 +218,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
 
             {puntosProcesados.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                <p className="tenue">No se detectaron cifras clave aisladas en este archivo.</p>
+                <p className="tenue">No se detectaron extractos específicos en este archivo.</p>
                 {doc.total_paginas > 0 && (
                   <button className="btn-pag-nav" onClick={() => onVerPagina(doc.id, 1)} style={{ marginTop: '1rem' }}>
                     <i className="fa-regular fa-file-lines"></i> Explorar páginas del documento
@@ -270,52 +234,25 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
                         <span>{i + 1}</span>
                       </div>
                       <span className="doc-punto-tipo">
-                        {p.metrics.length > 0 ? (
-                          <>
-                            <i className="fa-solid fa-coins" style={{ color: '#d97706', marginRight: '5px' }}></i>
-                            Datos Financieros y Cifras
-                          </>
-                        ) : (
-                          <>
-                            <i className="fa-regular fa-bookmark" style={{ color: 'var(--accent-color)', marginRight: '5px' }}></i>
-                            Extracto de Contenido
-                          </>
-                        )}
+                        <i className="fa-regular fa-bookmark" style={{ color: 'var(--accent-color)', marginRight: '6px' }}></i>
+                        Extracto Relevante del Expediente
                       </span>
                       {p.pagina && (
                         <button
                           type="button"
                           className="btn-punto-pag"
                           onClick={() => onVerPagina(doc.id, p.pagina)}
-                          title="Ver página original en el visor estructurado"
+                          title="Ver página original en el visor interactivo"
                         >
                           <i className="fa-regular fa-file-lines"></i> Pág. {p.pagina}
                         </button>
                       )}
                     </div>
 
-                    {/* Si tiene métricas contables/financieras detectadas, mostrarlas en tarjetas limpias */}
-                    {p.metrics.length > 0 ? (
-                      <div className="doc-metrics-grid">
-                        {p.metrics.map((m, mIdx) => (
-                          <div key={mIdx} className="doc-metric-item">
-                            <span className="doc-metric-concept">{m.concepto}</span>
-                            <div className="doc-metric-values">
-                              {m.cifras.map((c, cIdx) => (
-                                <span
-                                  key={cIdx}
-                                  className={`doc-metric-tag ${c.isPercent ? (c.isNegative ? 'badge-down' : 'badge-up') : (c.isNegative ? 'num-neg' : 'num-pos')}`}
-                                >
-                                  {c.display}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="doc-punto-text">{p.textoLimpio}</p>
-                    )}
+                    {/* Texto completo, fluido y de renglón continuo sin cortes abruptos */}
+                    <p className="doc-punto-text">
+                      {p.textoLimpio}
+                    </p>
                   </div>
                 ))}
               </div>

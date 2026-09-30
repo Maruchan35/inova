@@ -362,17 +362,18 @@ export default function Portada({ onElegir, onDocumento }) {
             </ul>
           )}
         </div>
-      </section>
 
-      <section style={{ textAlign: 'center', marginTop: '4rem', padding: '0 20px', paddingBottom: '2rem' }}>
-        <h3 style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '1.4rem', marginBottom: '1.5rem' }}>
-          <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)', marginRight: '8px' }}></i>
-          Explora la República Mexicana
-        </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '2rem' }}>
-          Selecciona cualquier estado en el mapa interactivo para consultar sus documentos y municipios.
-        </p>
-        <MapaMexico estados={estados} onElegirEstado={onElegir} />
+        {/* Mapa Interactivo de la República Mexicana directamente debajo del buscador */}
+        <div className="mapa-home-wrapper">
+          <div className="mapa-home-header">
+            <h3>
+              <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)', marginRight: '8px' }}></i>
+              Explora México en el Mapa Interactivo
+            </h3>
+            <p>Selecciona cualquier estado o haz clic en su pin para consultar sus informes oficiales, actas y municipios.</p>
+          </div>
+          <MapaMexico estados={estados} onElegirEstado={onElegir} />
+        </div>
       </section>
 
       <section style={{ textAlign: 'center', marginTop: '3rem', marginBottom: '4rem', padding: '0 20px' }}>

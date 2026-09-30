@@ -45,15 +45,28 @@ function formatFinancialCell(val) {
 }
 
 /**
- * Analiza el texto plano de la página y lo descompone en bloques estructurados:
- * títulos, secciones temáticas, tablas de datos financieros/contables y párrafos.
+ * Analiza el texto plano de la página y reconstruye párrafos fluidos y continuos,
+ * evitando saltos de línea bruscos a mitad de oración, detectando tablas de datos
+ * y cintillos de sección contable genuinos.
  */
-function parsePageText(text) {
+function parsePageText(text, docTitle = '') {
   if (!text) return [];
-  const lines = text.split('\n').map(l => cleanOcrText(l)).filter(Boolean);
+  const rawLines = text.split('\n').map(l => cleanOcrText(l));
+  
   const blocks = [];
   let currentTable = null;
   let activeHeaders = null;
+  let currentParagraph = [];
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      blocks.push({
+        type: 'paragraph',
+        text: currentParagraph.join(' ')
+      });
+      currentParagraph = [];
+    }
+  };
 
   const flushTable = () => {
     if (currentTable && currentTable.rows.length > 0) {
@@ -62,77 +75,110 @@ function parsePageText(text) {
     currentTable = null;
   };
 
-  lines.forEach((line) => {
-    // 1. Detectar cabecera de tabla explícita (Concepto, Cuenta, etc.)
-    if (/^(Concepto|Cuenta|Partida|Descripci[oó]n|Rubro)\b/i.test(line)) {
+  const normTitle = cleanOcrText(docTitle).toLowerCase();
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+
+    // Línea vacía: fin de párrafo natural
+    if (!line) {
+      flushParagraph();
+      flushTable();
+      continue;
+    }
+
+    // Número de página aislado (ej. "14")
+    if (/^\d{1,4}$/.test(line)) {
+      flushParagraph();
+      flushTable();
+      continue;
+    }
+
+    // Encabezado de repetición del documento en las primeras líneas
+    if (normTitle && line.toLowerCase().includes(normTitle.slice(0, 25)) && line.length < 90 && i < 3) {
+      flushParagraph();
+      flushTable();
+      continue;
+    }
+
+    // 1. Detectar cabecera de tabla contable explícita
+    if (/^(Concepto|Cuenta|Partida|Descripci[oó]n|Rubro)\b/i.test(line) && (/\d|%|Variaci|Columna/i.test(line))) {
+      flushParagraph();
       flushTable();
       const headers = line.split(/\s{2,}|\t/).filter(Boolean);
       activeHeaders = headers.length > 1 ? headers : ['Concepto / Rubro', 'Período Actual', 'Período Anterior', 'Variación ($)', 'Variación (%)'];
-      return;
+      continue;
     }
 
-    // 2. Detectar encabezado de sección / rubro contable (todo mayúsculas o termina en dos puntos, corto)
-    const isUpper = line === line.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(line);
-    if (((isUpper && line.length < 55) || (line.endsWith(':') && line.length < 45)) && !/\d{3,}/.test(line)) {
-      flushTable();
-      blocks.push({ type: 'section', title: line.replace(/:$/, '') });
-      return;
-    }
-
-    // 3. Fusión de números OCR cortados (p. ej. "105,278,46" + "9" o "61.8" + "3%")
+    // 2. Fila tabular con concepto y columnas numéricas al final
     const rawTokens = line.split(/\s+/);
     const tokens = [];
-    for (let i = 0; i < rawTokens.length; i++) {
-      let t = rawTokens[i];
-      while (i + 1 < rawTokens.length) {
-        const next = rawTokens[i + 1];
-        if (/^-?[\d,.]+%?$/.test(t) && /^-?[\d,.]+%?$/.test(next)) {
-          if (t.endsWith(',') || next.startsWith('.') || (next.length <= 2 && /^\d+%?$/.test(next))) {
-            t += next;
-            i++;
+    for (let tIdx = 0; tIdx < rawTokens.length; tIdx++) {
+      let tok = rawTokens[tIdx];
+      while (tIdx + 1 < rawTokens.length) {
+        const next = rawTokens[tIdx + 1];
+        if (/^-?[\d,.]+%?$/.test(tok) && /^-?[\d,.]+%?$/.test(next)) {
+          if (tok.endsWith(',') || next.startsWith('.') || (next.length <= 2 && /^\d+%?$/.test(next))) {
+            tok += next;
+            tIdx++;
             continue;
           }
         }
         break;
       }
-      tokens.push(t);
+      tokens.push(tok);
     }
 
-    // Encontrar dónde inician las columnas numéricas al final de la línea
     let numStart = -1;
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      if (/^-?[\d,.]+%?$/.test(tokens[i])) {
-        numStart = i;
+    for (let k = tokens.length - 1; k >= 0; k--) {
+      if (/^-?[\d,.]+%?$/.test(tokens[k])) {
+        numStart = k;
       } else {
         break;
       }
     }
 
-    // Es fila tabular si hay texto conceptual a la izquierda y valores numéricos a la derecha
-    if (numStart > 0 && numStart < tokens.length) {
-      const concept = tokens.slice(0, numStart).join(' ');
-      const values = tokens.slice(numStart);
-      const isSingleYear = values.length === 1 && /^(19|20)\d{2}$/.test(values[0]);
-      const hasFinancialData = values.some(v => v.includes(',') || v.includes('%') || v.length >= 5 || values.length >= 2);
+    const hasMultipleNumbers = numStart > 0 && (tokens.length - numStart >= 2);
+    const hasSingleFormattedNumber = numStart > 0 && (tokens.length - numStart === 1) && (tokens[numStart].includes(',') || tokens[numStart].includes('%'));
+    const isSingleYear = (tokens.length - numStart === 1) && /^(19|20)\d{2}$/.test(tokens[numStart]);
+    const conceptLength = tokens.slice(0, numStart).join(' ').length;
+    const isProseSentence = line.includes(' es decir, ') || line.includes('representó el') || line.includes('de acuerdo con') || line.length > 90;
 
-      if (/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(concept) && !isSingleYear && hasFinancialData) {
-        if (!currentTable) {
-          currentTable = {
-            type: 'table',
-            headers: activeHeaders || ['Concepto / Rubro', 'Importe 1', 'Importe 2', 'Variación', '%'],
-            rows: []
-          };
-        }
-        currentTable.rows.push({ concept, values });
-        return;
+    // Solo es fila tabular si tiene concepto compacto (< 45 caracteres) y cifras numéricas claras (no una frase descriptiva)
+    if (numStart > 0 && (hasMultipleNumbers || hasSingleFormattedNumber) && !isSingleYear && conceptLength < 45 && !isProseSentence) {
+      flushParagraph();
+      if (!currentTable) {
+        currentTable = {
+          type: 'table',
+          headers: activeHeaders || ['Concepto / Rubro', 'Importe 1', 'Importe 2', 'Variación', '%'],
+          rows: []
+        };
       }
+      currentTable.rows.push({
+        concept: tokens.slice(0, numStart).join(' '),
+        values: tokens.slice(numStart)
+      });
+      continue;
     }
 
-    // Párrafo de texto regular
-    flushTable();
-    blocks.push({ type: 'text', text: line });
-  });
+    // 3. Título de sección genuino (en mayúsculas puras, corto, sin punto ni coma, no es una oración corrida)
+    const isUpper = line === line.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(line);
+    const endsWithColon = line.endsWith(':');
+    const isCleanSectionTitle = !line.includes('.') && !line.includes(',') && !/\d{2,}/.test(line) && line.length <= 40;
 
+    if ((isUpper || endsWithColon) && isCleanSectionTitle) {
+      flushParagraph();
+      flushTable();
+      blocks.push({ type: 'section', title: line.replace(/:$/, '') });
+      continue;
+    }
+
+    // 4. Prosa y texto continuo: se unen las líneas consecutivas para que las oraciones no se corten
+    flushTable();
+    currentParagraph.push(line);
+  }
+
+  flushParagraph();
   flushTable();
   return blocks;
 }
@@ -152,8 +198,8 @@ export default function PaginaModal({ pagina, onClose, onVerPagina }) {
 
   const blocks = useMemo(() => {
     if (!pagina?.texto) return [];
-    return parsePageText(pagina.texto);
-  }, [pagina?.texto]);
+    return parsePageText(pagina.texto, pagina.documento_titulo);
+  }, [pagina?.texto, pagina?.documento_titulo]);
 
   const copiarTexto = async () => {
     if (!pagina?.texto) return;
@@ -169,7 +215,6 @@ export default function PaginaModal({ pagina, onClose, onVerPagina }) {
   if (!pagina) return null;
   const { documento_id: doc, pagina: n, total_paginas: total } = pagina;
 
-  // Determinar si encontramos tablas estructuradas en esta página
   const tieneTablas = blocks.some(b => b.type === 'table');
 
   return (
@@ -200,7 +245,7 @@ export default function PaginaModal({ pagina, onClose, onVerPagina }) {
                 type="button"
                 className={`btn-view-tab ${vista === 'estructurada' ? 'active' : ''}`}
                 onClick={() => setVista('estructurada')}
-                title="Ver datos organizados en tablas y secciones"
+                title="Ver texto continuo y tablas organizadas"
               >
                 <i className="fa-solid fa-table-cells" style={{ marginRight: '6px' }}></i>
                 Vista Estructurada
@@ -271,7 +316,7 @@ export default function PaginaModal({ pagina, onClose, onVerPagina }) {
                     );
                   }
 
-                  // Párrafo de texto ordinario
+                  // Párrafo continuo de texto
                   return (
                     <p key={idx} className="pagina-parrafo-clean">
                       {block.text}
