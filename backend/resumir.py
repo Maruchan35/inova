@@ -82,6 +82,7 @@ def main() -> int:
     except (FileNotFoundError, ValueError):
         hechos = set()
     con = db.abrir()
+    con.execute("PRAGMA busy_timeout = 60000")  # si la página está leyendo la base, espera en vez de tronar
     docs = pendientes(con, hechos)
     if args.muestra:
         docs = random.Random(3).sample(docs, min(args.muestra, len(docs)))
