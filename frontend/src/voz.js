@@ -11,9 +11,16 @@ const ERRORES = {
   'not-allowed': 'Necesito permiso para usar el micrófono. Permítelo en el navegador y vuelve a tocar el micrófono.',
   'service-not-allowed': 'Necesito permiso para usar el micrófono. Permítelo en el navegador y vuelve a tocar el micrófono.',
   'audio-capture': 'No encontré un micrófono en este equipo.',
-  'network': 'No hay conexión a internet para reconocer la voz.',
   'no-speech': 'No te escuché. Toca el micrófono y vuelve a intentarlo.',
 };
+
+// El error "network" casi nunca es falta de internet: Brave (y otros derivados de Chrome) en computadora traen
+// el botón pero no el servicio de reconocimiento, que solo viene en Chrome y Edge. En Android sí funciona.
+function avisoSinServicio() {
+  if (!navigator.onLine) return 'No hay conexión a internet para reconocer la voz.';
+  const navegador = navigator.brave ? 'Brave' : 'Este navegador';
+  return `${navegador} no trae reconocimiento de voz en computadora. Abre esta página en Chrome o Edge para hablarle, o escribe tu pregunta.`;
+}
 
 // Empieza a escuchar. onParcial(texto) mientras habla; onFinal(texto) al terminar; onError(mensaje) si algo falla.
 // Devuelve { cancelar() }.
@@ -37,7 +44,7 @@ export function escuchar({ onParcial, onFinal, onError }) {
   r.onerror = (e) => {
     if (cerrado) return;
     cerrado = true;
-    onError?.(ERRORES[e.error] || 'No pude escucharte. Vuelve a intentarlo.');
+    onError?.(e.error === 'network' ? avisoSinServicio() : ERRORES[e.error] || 'No pude escucharte. Vuelve a intentarlo.');
   };
   r.onend = () => {
     if (cerrado) return;
