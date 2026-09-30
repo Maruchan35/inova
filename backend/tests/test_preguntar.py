@@ -177,3 +177,31 @@ def test_si_no_hay_nada_del_lugar_busca_en_todo_el_catalogo(cliente, ia):
 def test_sin_ia_tambien_busca_en_los_estatales(cliente):
     r = preguntar(cliente, "¿Cuántas escuelas se construyeron?", municipio_id=1)
     assert r["respuesta"].startswith("Encontré") and r["citas"][0]["documento_id"] == 4
+
+
+def test_las_respuestas_guardadas_sobreviven_a_un_reinicio(cliente, ia):
+    from app import preguntas
+    from app.db import abrir
+
+    primera = preguntar(cliente, "¿Cuánto recibe seguridad pública?", documento_id=2)
+    assert primera["detalle"]["origen"] == "ia" and len(ia.llamadas) == 1
+    preguntas.limpiar_cache(tambien_guardadas=False)  # como si el servidor se reiniciara
+    despues = preguntar(cliente, "cuanto recibe SEGURIDAD publica", documento_id=2)
+    assert despues["detalle"]["origen"] == "cache" and len(ia.llamadas) == 1  # sin volver a pagarle a la IA
+    assert (despues["respuesta"], despues["citas"]) == (primera["respuesta"], primera["citas"])
+    con = abrir()
+    try:
+        assert con.execute("SELECT COUNT(*) FROM respuestas").fetchone()[0] == 1
+    finally:
+        con.close()
+
+
+def test_sin_ia_no_se_guarda_nada(cliente):
+    from app.db import abrir
+
+    preguntar(cliente, "¿Cuánto costó el mercado?", municipio_id=1)  # sin clave de IA: respaldo
+    con = abrir()
+    try:
+        assert con.execute("SELECT COUNT(*) FROM respuestas").fetchone()[0] == 0
+    finally:
+        con.close()

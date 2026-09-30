@@ -82,6 +82,11 @@
   navegador (así llegó el falso) y procesa varios a la vez (`--hilos`, 3 por defecto). Para montar los 65
   documentos faltan los archivos (están en la computadora de Marko): ponerlos en `datos/pdfs/` y correr
   `python cargar.py --solo-revisar` y luego `python cargar.py`.
+- **Caché permanente:** las respuestas de la IA se guardan también en la tabla `respuestas`, así que
+  sobreviven a los reinicios. Medido con DeepSeek real: 10 veces la misma pregunta (escrita distinto) = 1
+  llamada; 15 personas a la vez = 1 llamada; preguntas distintas sobre el mismo informe: 99.8% del texto
+  sale del caché de DeepSeek ($0.0008 contra $0.0315). Si cambias las instrucciones de la IA en
+  `preguntas.py`, sube `VERSION_RESPUESTAS` para no servir respuestas viejas.
 - Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
   columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
   cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.
