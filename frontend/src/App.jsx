@@ -204,7 +204,7 @@ export default function App() {
       <footer>
         <p>
           &copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.
-          <span className="version-badge">v2.2.1</span>
+          <span className="version-badge">v2.3.0</span>
         </p>
       </footer>
     </>
