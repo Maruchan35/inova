@@ -53,27 +53,37 @@ export default function App() {
   const [chatbotAbierto, setChatbotAbierto] = useState(false);
   const [contexto, setContexto] = useState('todos los documentos'); // sobre qué pregunta el chatbot
 
+  const isDocumento = currentPath.startsWith('/documento/');
+  const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
+  const esPaginaPrincipal = currentPath === '/' || currentPath === '';
+
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      setPagina(null);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    setPagina(null);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (!isDocumento && !isLugar) setContexto('todos los documentos');
+  }, [currentPath, isDocumento, isLugar]);
+
   const navigate = (path) => {
     window.history.pushState(null, '', path);
     setCurrentPath(path);
+    setPagina(null);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina).catch(() => {});
 
   let content = null;
   let chatbotFiltros = {};
-  const isDocumento = currentPath.startsWith('/documento/');
-  const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
-
-  useEffect(() => {
-    if (!isDocumento && !isLugar) setContexto('todos los documentos');
-  }, [isDocumento, isLugar]);
 
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
@@ -101,39 +111,48 @@ export default function App() {
   return (
     <>
       <header>
-        <div className="logo">
+        <div 
+          className="logo interactive-logo" 
+          onClick={() => {
+            navigate('/');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          title="Ir a Inicio"
+        >
           <i className="fa-regular fa-message"></i> CabildoAbierto
         </div>
         <nav>
           <ul>
-            <li>
-              <button className="btn-link" onClick={() => navigate('/')}>
-                Inicio
-              </button>
-            </li>
-            <li>
-              <button className="btn-link" onClick={() => {
-                navigate('/');
-                setTimeout(() => {
-                  const buscador = document.querySelector('.search-bar input');
-                  buscador?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  buscador?.focus();
-                }, 100);
-              }}>
-                Buscar lugar
-              </button>
-            </li>
-            <li>
-              <button className="btn-link" onClick={() => setChatbotAbierto(true)}>
-                Pregúntale a la IA
-              </button>
-            </li>
-            {(isLugar || isDocumento) && (
-              <li>
-                <button className="btn-link" onClick={() => window.history.back()}>
-                  <i className="fa-solid fa-arrow-left"></i> Volver
-                </button>
-              </li>
+            {!esPaginaPrincipal && (
+              <>
+                <li>
+                  <button className="btn-link" onClick={() => navigate('/')}>
+                    <i className="fa-solid fa-house" style={{ marginRight: '5px' }}></i> Inicio
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => {
+                    navigate('/');
+                    setTimeout(() => {
+                      const buscador = document.querySelector('.search-bar input');
+                      buscador?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      buscador?.focus();
+                    }, 100);
+                  }}>
+                    <i className="fa-solid fa-magnifying-glass" style={{ marginRight: '5px' }}></i> Buscar lugar
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => setChatbotAbierto(true)}>
+                    <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '5px' }}></i> Pregúntale a la IA
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => window.history.back()}>
+                    <i className="fa-solid fa-arrow-left"></i> Volver
+                  </button>
+                </li>
+              </>
             )}
           </ul>
         </nav>
