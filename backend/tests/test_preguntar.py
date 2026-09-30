@@ -205,3 +205,45 @@ def test_sin_ia_no_se_guarda_nada(cliente):
         assert con.execute("SELECT COUNT(*) FROM respuestas").fetchone()[0] == 0
     finally:
         con.close()
+
+
+def test_entiende_lugar_seccion_y_si_pide_un_panorama(cliente):
+    from app.db import abrir
+    from app.entender import entender
+
+    con = abrir()
+    try:
+        casos = {
+            "háblame del informe de gobierno de cdmx": ("Ciudad de México", "informes", True),
+            "hablame de las becas en irapuato": ("Irapuato, Guanajuato", None, False),
+            "¿cuánto costó el mercado de León?": ("León, Guanajuato", None, False),
+            "¿Qué dice el presupuesto de egresos de Guanajuato?": ("Guanajuato", "presupuesto", True),
+            "contratos de edomex": ("México", "contratos", True),
+        }
+        for pregunta, esperado in casos.items():
+            e = entender(con, pregunta)
+            assert (e["lugar"], e["seccion"], e["panorama"]) == esperado, pregunta
+    finally:
+        con.close()
+
+
+def test_un_panorama_explica_el_documento_que_corresponde(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "Es el presupuesto de Irapuato: 3,200 millones.", "fuentes": [1]}
+    r = preguntar(cliente, "¿Qué dice el presupuesto de egresos de Irapuato?")  # desde la portada, sin filtros
+    assert r["documentos"][0]["id"] == 2 and r["citas"][0]["documento_id"] == 2
+    assert "DOCUMENTOS QUE HAY SOBRE ESO" in ia.llamadas[0] and "[Fuente 1] Presupuesto de Egresos 2026 (ejemplo)" in ia.llamadas[0]
+    assert r["detalle"]["entendido"] == {"lugar": "Irapuato, Guanajuato", "seccion": "Presupuesto y finanzas", "tipo": "panorama"}
+    assert r["detalle"]["modo"] == "panorama"
+
+
+def test_el_lugar_que_dice_la_pregunta_gana_a_la_pagina(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "El mercado costó $2,300,000.", "fuentes": [1]}
+    r = preguntar(cliente, "¿Cuánto costó el mercado de Irapuato?", municipio_id=2)  # desde la página de León
+    assert r["citas"][0]["documento_id"] == 3 and r["detalle"]["alcance"] == "lugar"
+    assert r["detalle"]["entendido"]["lugar"] == "Irapuato, Guanajuato"
+    assert 3 in [d["id"] for d in r["documentos"]]
+
+
+def test_sin_ia_tambien_devuelve_documentos(cliente):
+    r = preguntar(cliente, "¿Qué dice el presupuesto de egresos de Irapuato?")
+    assert r["documentos"][0]["id"] == 2 and r["detalle"]["entendido"]["tipo"] == "panorama"

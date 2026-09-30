@@ -12,6 +12,7 @@ Sin clave, o si la IA falla, se responde con las citas de la búsqueda: la demo 
 
 import hashlib
 import json
+import math
 import re
 import sqlite3
 import threading
@@ -20,6 +21,7 @@ import unicodedata
 from collections import OrderedDict, deque
 
 from .busqueda import buscar_fragmentos, consulta_fts, filtros_sql
+from .entender import entender
 from .db import abrir
 from .procesamiento import llm
 
@@ -29,7 +31,7 @@ MAX_CARACTERES_PAGINA = 6_000
 MAX_CARACTERES_DOCUMENTO = 900_000  # ~300k tokens; si es más grande, solo van las páginas relevantes
 MAX_RESPUESTAS = 1_000  # respuestas guardadas en memoria; se descartan las menos usadas
 # Súbelo si cambian las instrucciones de la IA: así no se sirven respuestas guardadas con las anteriores.
-VERSION_RESPUESTAS = 2  # 2: búsqueda sin palabras vacías y toda cifra con su fuente
+VERSION_RESPUESTAS = 3  # 3: entiende lugar, sección y panorama; responde con documentos relacionados
 
 NO_ENCONTRE = "No encontré información sobre eso en los documentos cargados."
 
@@ -52,6 +54,12 @@ FORMATO = (
 )
 FORMATO_DOCUMENTO = FORMATO.format(que_es="los números de [Página N]")
 FORMATO_FUENTES = FORMATO.format(que_es="los números de [Fuente N]")
+FORMATO_PANORAMA = FORMATO_FUENTES + (
+    " La persona pide un panorama, no un dato: en 'respuesta' (3 a 6 frases) di qué documento es (o cuáles hay, "
+    "si son varios), de qué trata y lo más importante, con cifras cuando existan. Si ninguno es exactamente lo que "
+    "pide (por ejemplo, pide el informe del gobierno del estado y solo hay informes de alcaldías), dilo claramente "
+    "y di qué hay en su lugar."
+)
 
 # Últimas preguntas, para la página de prueba y la vista previa: de dónde salió cada respuesta y cuánto costó.
 BITACORA: deque = deque(maxlen=50)
@@ -92,7 +100,10 @@ def responder(con: sqlite3.Connection, pregunta: str, **filtros) -> dict:
     """Respuesta con el formato de /api/preguntar, más "detalle": de dónde salió, cuánto tardó y cuánto costó."""
     registro = {"pregunta": pregunta.strip()[:500], "origen": None, "modo": None, "uso": {}, "aviso": None}
     resultado = _responder(con, registro, **filtros)
+    resultado.setdefault("documentos", [])
+    entendido = resultado.pop("entendido", None)
     resultado["detalle"] = {
+        "entendido": entendido,
         "origen": ORIGEN_PUBLICO.get(registro["origen"], "sin_ia"),
         "modo": registro["modo"],
         "segundos": registro["segundos"],
@@ -127,7 +138,15 @@ def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
                 if documento:
                     resultado = _con_documento(con, pregunta, *documento, registro["uso"])
                 else:
-                    resultado = _con_paginas_relevantes(con, pregunta, filtros, registro["uso"], registro)
+                    plan = _preparar(con, pregunta, filtros)
+                    if plan["entendido"]["panorama"] and plan["documentos"]:
+                        registro["modo"] = "panorama"
+                        resultado = _con_panorama(con, pregunta, plan, registro["uso"])
+                    else:
+                        resultado = _con_paginas_relevantes(con, pregunta, plan["filtros"], registro["uso"], registro,
+                                                            plan)
+                    resultado["documentos"] = [_documento_publico(d) for d in plan["documentos"]]
+                    resultado["entendido"] = _entendido_publico(con, plan["entendido"])
             except Exception as e:  # la IA falló: respaldo sin IA, y no se guarda para reintentar después
                 registro["origen"] = "respaldo sin IA"
                 registro["aviso"] = f"La IA falló ({type(e).__name__}: {e})"
@@ -178,7 +197,10 @@ def _leer_de_la_base(con: sqlite3.Connection, clave: str) -> dict | None:
         return None
     if fila is None:
         return None
-    resultado = {"respuesta": fila["respuesta"], "citas": json.loads(fila["citas_json"] or "[]")}
+    guardado = json.loads(fila["citas_json"] or "[]")
+    if isinstance(guardado, list):  # formato viejo: solo citas
+        guardado = {"citas": guardado}
+    resultado = {"respuesta": fila["respuesta"], **guardado}
     _guardar(clave, resultado)
     return resultado
 
@@ -187,7 +209,8 @@ def _guardar_en_la_base(con: sqlite3.Connection, clave: str, pregunta: str, resu
     try:
         con.execute(
             "INSERT OR REPLACE INTO respuestas (clave, pregunta, respuesta, citas_json) VALUES (?, ?, ?, ?)",
-            (_clave_corta(clave), pregunta, resultado["respuesta"], json.dumps(resultado["citas"], ensure_ascii=False)),
+            (_clave_corta(clave), pregunta, resultado["respuesta"],
+             json.dumps({k: v for k, v in resultado.items() if k != "respuesta"}, ensure_ascii=False)),
         )
         con.commit()
     except sqlite3.Error:  # si no se puede guardar, sigue en memoria
@@ -244,15 +267,21 @@ def _alcance(filtros: dict) -> dict:
     return alcance
 
 
-def paginas_relevantes(con, pregunta: str, filtros: dict, registro: dict | None = None) -> list[dict]:
+def paginas_relevantes(con, pregunta: str, filtros: dict, registro: dict | None = None,
+                       plan: dict | None = None) -> list[dict]:
     """Las páginas que se le mandan a la IA (o que se muestran sin IA), con su texto.
 
     Primero en el lugar (municipio + estatales de su estado), y primero las que nombran al municipio.
     Si en el lugar no hay nada, busca en todo el catálogo y lo anota en `registro["alcance"] = "todo"`."""
     alcance = _alcance(filtros)
     # El nombre del lugar ya filtrado no ayuda a buscar ("Sinaloa" sale en el encabezado de cada página de Sinaloa)
-    excluir = _palabras_del_lugar(con, alcance)
-    candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, excluir=excluir, **alcance)
+    excluir = _palabras_del_lugar(con, alcance) | (plan["excluir"] if plan else frozenset())
+    candidatas = []
+    if plan and plan["documentos"]:  # primero dentro de los documentos que mejor corresponden a la pregunta
+        candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, excluir=excluir,
+                                       documento_ids=[d["id"] for d in plan["documentos"]])
+    if not candidatas:
+        candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, excluir=excluir, **alcance)
     if not candidatas and alcance:
         candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4)
         if candidatas and registro is not None:
@@ -279,8 +308,8 @@ def _palabras_del_lugar(con, alcance: dict) -> frozenset:
     return frozenset(normalizar(p) for n in nombres for p in n.split() if len(p) >= 3)
 
 
-def _con_paginas_relevantes(con, pregunta: str, filtros: dict, uso: dict, registro: dict) -> dict:
-    encontradas = paginas_relevantes(con, pregunta, filtros, registro)
+def _con_paginas_relevantes(con, pregunta: str, filtros: dict, uso: dict, registro: dict, plan: dict | None = None) -> dict:
+    encontradas = paginas_relevantes(con, pregunta, filtros, registro, plan)
     if not encontradas:  # nada que mandarle a la IA: se ahorra la llamada
         return {"respuesta": NO_ENCONTRE, "citas": []}
     fuentes, permitidas = [], {}
@@ -342,7 +371,126 @@ def _cita(con, documento_id: int, pagina: int, consulta: str) -> dict:
 
 def _sin_ia(con, pregunta: str, filtros: dict, registro: dict | None = None) -> dict:
     consulta = consulta_fts(pregunta)
+    plan = _preparar(con, pregunta, filtros) if not filtros.get("documento_id") else None
     citas = [_cita(con, c["documento_id"], c["pagina"], consulta)
-             for c in paginas_relevantes(con, pregunta, filtros, registro)[:MAX_CITAS]]
+             for c in paginas_relevantes(con, pregunta, plan["filtros"] if plan else filtros, registro, plan)[:MAX_CITAS]]
     respuesta = f"Encontré {len(citas)} fragmento(s) relevante(s) en los documentos." if citas else NO_ENCONTRE
-    return {"pregunta": pregunta, "respuesta": respuesta, "citas": citas}
+    resultado = {"pregunta": pregunta, "respuesta": respuesta, "citas": citas}
+    if plan:
+        resultado["documentos"] = [_documento_publico(d) for d in plan["documentos"]]
+        resultado["entendido"] = _entendido_publico(con, plan["entendido"])
+    return resultado
+
+
+# --- Entender la pregunta y elegir documentos antes de buscar páginas ---
+
+MAX_DOCUMENTOS = 5
+
+
+def _preparar(con, pregunta: str, filtros: dict) -> dict:
+    """Lugar y sección que dice la pregunta (ganan sobre la página en la que se está) y los documentos candidatos."""
+    entendido = entender(con, pregunta)
+    filtros = dict(filtros)
+    if entendido["municipio_id"]:
+        filtros.update(municipio_id=entendido["municipio_id"], estado_id=None)
+    elif entendido["estado_id"]:
+        filtros.update(estado_id=entendido["estado_id"], municipio_id=None)
+    alcance = _alcance(filtros)
+    excluir = frozenset(entendido["palabras_lugar"]) | _palabras_del_lugar(con, alcance)
+    documentos = documentos_candidatos(con, pregunta, alcance, entendido["seccion"], excluir)
+    return {"entendido": entendido, "filtros": filtros, "excluir": excluir, "documentos": documentos}
+
+
+def documentos_candidatos(con, pregunta: str, alcance: dict, seccion: str | None, excluir: frozenset) -> list[dict]:
+    """Los documentos que mejor corresponden a la pregunta: por su título y por cuántas páginas tratan el tema."""
+    def en_alcance(con_seccion: bool) -> list:
+        where, params = filtros_sql(**{**alcance, "seccion": seccion if con_seccion else alcance.get("seccion")})
+        return con.execute(
+            f"""
+            SELECT d.id, d.titulo, d.anio, d.total_paginas, s.clave AS seccion, s.nombre AS seccion_nombre,
+                   COALESCE(m.nombre, e.nombre) AS lugar
+            FROM documentos d JOIN secciones s ON s.id = d.seccion_id JOIN estados e ON e.id = d.estado_id
+            LEFT JOIN municipios m ON m.id = d.municipio_id
+            WHERE d.estatus = 'listo'{where}
+            """,
+            params,
+        ).fetchall()
+
+    filas = en_alcance(bool(seccion)) or (en_alcance(False) if seccion else [])
+    if not filas:
+        return []
+    terminos = {t.strip('"*') for t in consulta_fts(pregunta, excluir=excluir).split(" OR ") if t}
+    paginas_por_doc = {}
+    ids = [f["id"] for f in filas]
+    for operador in ("AND", "OR"):
+        consulta = consulta_fts(pregunta, operador, excluir)
+        if not consulta:
+            break
+        for i in range(0, len(ids), 900):
+            lote = ids[i:i + 900]
+            for documento_id, cuantas in con.execute(
+                f"""SELECT p.documento_id, COUNT(*) FROM paginas_fts JOIN paginas p ON p.id = paginas_fts.rowid
+                    WHERE paginas_fts MATCH ? AND p.documento_id IN ({', '.join('?' * len(lote))})
+                    GROUP BY p.documento_id""",
+                (consulta, *lote),
+            ):
+                paginas_por_doc[documento_id] = cuantas
+        if paginas_por_doc:
+            break
+    documentos = []
+    for f in filas:
+        titulo = normalizar(f["titulo"])
+        en_titulo = sum(1 for t in terminos if normalizar(t) in titulo)
+        paginas = paginas_por_doc.get(f["id"], 0)
+        if not en_titulo and not paginas:
+            continue
+        puntaje = 2 * en_titulo + math.log1p(paginas) + (0.02 * (f["anio"] - 2000) if f["anio"] else 0)
+        documentos.append({**dict(f), "puntaje": round(puntaje, 3)})
+    documentos.sort(key=lambda d: d["puntaje"], reverse=True)
+    if not documentos and seccion:  # piden una sección ("contratos de edomex"): los más recientes de esa sección
+        documentos = [{**dict(f), "puntaje": 0.1} for f in sorted(en_alcance(True), key=lambda f: f["anio"] or 0, reverse=True)]
+    return documentos[:MAX_DOCUMENTOS]
+
+
+def _paginas_de_panorama(con, documento_id: int, pregunta: str, excluir: frozenset, cuantas: int) -> list[tuple]:
+    """Para explicar un documento: sus primeras páginas con texto (índice, presentación) y las que tratan el tema."""
+    elegidas = [n for n, t in con.execute(
+        "SELECT numero, texto FROM paginas WHERE documento_id = ? AND numero <= 12 ORDER BY numero", (documento_id,))
+        if len(t.strip()) >= 200][:max(1, cuantas // 2)]
+    for r in buscar_fragmentos(con, pregunta, limite=cuantas * 2, excluir=excluir, documento_ids=[documento_id]):
+        if len(elegidas) >= cuantas:
+            break
+        if r["pagina"] not in elegidas:
+            elegidas.append(r["pagina"])
+    return [(n, con.execute("SELECT texto FROM paginas WHERE documento_id = ? AND numero = ?", (documento_id, n))
+             .fetchone()["texto"]) for n in sorted(elegidas)]
+
+
+def _con_panorama(con, pregunta: str, plan: dict, uso: dict) -> dict:
+    documentos = plan["documentos"]
+    claro = len(documentos) == 1 or documentos[0]["puntaje"] >= 1.25 * max(documentos[1]["puntaje"], 0.01)
+    fuentes, permitidas = [], {}
+    for d in documentos[:1] if claro else documentos[:3]:
+        for numero, texto in _paginas_de_panorama(con, d["id"], pregunta, plan["excluir"], 6 if claro else 2):
+            n = len(fuentes) + 1
+            fuentes.append(f"[Fuente {n}] {d['titulo']} ({d['lugar']}), página {numero}:\n"
+                           f"{texto.strip()[:MAX_CARACTERES_PAGINA]}\n")
+            permitidas[n] = (d["id"], numero)
+    if not fuentes:
+        return {"respuesta": NO_ENCONTRE, "citas": []}
+    lista = "\n".join(f"- {d['titulo']} ({d['lugar']}, {d['anio'] or 'sin año'}, {d['total_paginas']} páginas, "
+                      f"sección {d['seccion_nombre']})" for d in documentos)
+    usuario = (f"DOCUMENTOS QUE HAY SOBRE ESO:\n{lista}\n\nFUENTES:\n\n" + "\n".join(fuentes)
+               + f"\n{FORMATO_PANORAMA}\n\nPREGUNTA: {pregunta}")
+    return _resultado(con, pregunta, llm.pedir_json(SISTEMA, usuario, uso), permitidas)
+
+
+def _documento_publico(d: dict) -> dict:
+    return {k: d[k] for k in ("id", "titulo", "anio", "lugar", "seccion")}
+
+
+def _entendido_publico(con, entendido: dict) -> dict:
+    seccion = entendido["seccion"] and con.execute(
+        "SELECT nombre FROM secciones WHERE clave = ?", (entendido["seccion"],)).fetchone()
+    return {"lugar": entendido["lugar"], "seccion": seccion["nombre"] if seccion else None,
+            "tipo": "panorama" if entendido["panorama"] else "dato"}

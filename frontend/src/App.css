@@ -505,3 +505,10 @@ nav ul {
 .municipios-lista { margin-top: 3rem; }
 .municipios-lista h3 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 1rem; }
 .municipios-lista > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Documentos relacionados y lo que entendió el chatbot */
+.chat-documentos { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; font-size: .82rem; }
+.chat-documentos strong { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+.chat-documentos .btn-link { text-align: left; font-size: .82rem; padding: 2px 0; }
+.chat-documentos .btn-link span { color: var(--text-muted); }
+.chat-entendido { font-size: .72rem; color: var(--text-muted); margin-top: 8px; }

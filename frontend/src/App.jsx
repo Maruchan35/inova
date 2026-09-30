@@ -104,7 +104,7 @@ export default function App() {
         {content}
       </main>
 
-      <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
+      <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>
         <p>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</p>
