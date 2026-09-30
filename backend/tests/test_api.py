@@ -99,3 +99,9 @@ def test_buscar_encuentra_singular_y_plural(cliente):
     citas = cliente.get("/api/buscar", params={"q": "luminaria"}).json()["resultados"]
     assert (citas[0]["documento_id"], citas[0]["pagina"]) == (1, 3)
     assert "[[luminarias]]" in citas[0]["fragmento"]
+
+
+def test_buscar_ignora_palabras_vacias_y_prefiere_paginas_con_todas_las_palabras(cliente):
+    assert cliente.get("/api/buscar", params={"q": "¿qué hay?"}).json()["resultados"] == []
+    citas = cliente.get("/api/buscar", params={"q": "háblame de la pavimentación de la calle Hidalgo"}).json()["resultados"]
+    assert (citas[0]["documento_id"], citas[0]["pagina"]) == (1, 2)

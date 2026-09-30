@@ -2,8 +2,23 @@
 
 import re
 import sqlite3
+import unicodedata
 
 Con = sqlite3.Connection
+
+# Palabras que no ayudan a encontrar la página correcta (aparecen en casi todas, o solo son la forma de preguntar).
+VACIAS = set("""
+que cual cuales cuanto cuanta cuantos cuantas como donde cuando quien quienes cuyo para por con sin sobre entre
+desde hasta hacia segun durante los las del una uno unos unas este esta estos estas ese esa esos esas eso esto
+aquel aquella hay fue fueron ser son era eran han has hace hizo tiene tienen tuvo mas muy sus les nos todo toda
+todos todas otro otra otros otras tambien ademas pero porque pues algo alguna alguno algunos algunas mucho
+mucha muchos muchas poco dime dame hablame habla explica explicame quiero quisiera saber informacion info datos
+puedes podrias favor gracias hola oye
+""".split())
+
+
+def _sin_acentos(palabra: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", palabra.lower()) if not unicodedata.combining(c))
 
 
 def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None, municipio_y_su_estado=None):
@@ -28,14 +43,15 @@ def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=No
     return "".join(f" AND {c}" for c in condiciones), params
 
 
-def consulta_fts(texto: str) -> str:
+def consulta_fts(texto: str, operador: str = "OR", excluir: frozenset = frozenset()) -> str:
     """Palabras de 3+ letras, entre comillas para que FTS5 no las interprete como operadores.
 
     Las de 5+ letras se buscan sin plural y como prefijo, para que el singular encuentre el plural y al revés:
-    "becas" → "beca"* (beca, becas, becarios), "municipales" → "municipal"*."""
+    "becas" → "beca"* (beca, becas, becarios), "municipales" → "municipal"*.
+    Se quitan las palabras vacías ("cuánto", "qué", "hay"...) y las de `excluir` (sin acentos)."""
     terminos = []
     for p in re.findall(r"\w+", texto, flags=re.UNICODE):
-        if len(p) < 3:
+        if len(p) < 3 or _sin_acentos(p) in VACIAS or _sin_acentos(p) in excluir:
             continue
         if len(p) < 5:
             terminos.append(f'"{p}"')
@@ -43,13 +59,24 @@ def consulta_fts(texto: str) -> str:
         minus = p.lower()
         raiz = p[:-2] if len(p) >= 6 and minus.endswith("es") else p[:-1] if minus.endswith("s") else p
         terminos.append(f'"{raiz}"*')
-    return " OR ".join(terminos)
+    return f" {operador} ".join(dict.fromkeys(terminos))
 
 
-def buscar_fragmentos(con: Con, texto: str, limite: int = 10, **filtros) -> list[dict]:
-    consulta = consulta_fts(texto)
-    if not consulta:
-        return []
+def buscar_fragmentos(con: Con, texto: str, limite: int = 10, excluir: frozenset = frozenset(), **filtros) -> list[dict]:
+    """Primero las páginas que tienen TODAS las palabras importantes; si no alcanzan, las que tienen alguna."""
+    resultados, vistas = [], set()
+    for operador in ("AND", "OR"):
+        consulta = consulta_fts(texto, operador, excluir)
+        if not consulta or len(resultados) >= limite:
+            break
+        for r in _buscar(con, consulta, limite, **filtros):
+            if (r["documento_id"], r["pagina"]) not in vistas:
+                vistas.add((r["documento_id"], r["pagina"]))
+                resultados.append(r)
+    return resultados[:limite]
+
+
+def _buscar(con: Con, consulta: str, limite: int, **filtros) -> list[dict]:
     where, params = filtros_sql(**filtros)
     filas = con.execute(
         f"""

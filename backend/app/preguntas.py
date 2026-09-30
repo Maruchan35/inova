@@ -29,7 +29,7 @@ MAX_CARACTERES_PAGINA = 6_000
 MAX_CARACTERES_DOCUMENTO = 900_000  # ~300k tokens; si es más grande, solo van las páginas relevantes
 MAX_RESPUESTAS = 1_000  # respuestas guardadas en memoria; se descartan las menos usadas
 # Súbelo si cambian las instrucciones de la IA: así no se sirven respuestas guardadas con las anteriores.
-VERSION_RESPUESTAS = 1
+VERSION_RESPUESTAS = 2  # 2: búsqueda sin palabras vacías y toda cifra con su fuente
 
 NO_ENCONTRE = "No encontré información sobre eso en los documentos cargados."
 
@@ -45,7 +45,8 @@ FORMATO = (
     'Devuelve JSON con esta forma: {{"encontrado": true, "respuesta": "...", "fuentes": [N]}}. '
     "'fuentes': {que_es} de donde sale cada dato de tu respuesta (máximo 5). Si los textos no traen ningún "
     "dato sobre la pregunta, devuelve encontrado false, explícalo en 'respuesta' y deja 'fuentes' vacío. Si solo "
-    "la responden en parte, da lo que sí dicen, con sus fuentes. "
+    "la responden en parte, da lo que sí dicen, con sus fuentes: todo dato o cifra que menciones lleva su fuente, "
+    "aunque encontrado sea false. "
     "Importante: copia cada cifra tal como aparece en el texto. No hagas operaciones: si el texto da un "
     "porcentaje, responde con el porcentaje y no lo conviertas a pesos."
 )
@@ -249,7 +250,9 @@ def paginas_relevantes(con, pregunta: str, filtros: dict, registro: dict | None 
     Primero en el lugar (municipio + estatales de su estado), y primero las que nombran al municipio.
     Si en el lugar no hay nada, busca en todo el catálogo y lo anota en `registro["alcance"] = "todo"`."""
     alcance = _alcance(filtros)
-    candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, **alcance)
+    # El nombre del lugar ya filtrado no ayuda a buscar ("Sinaloa" sale en el encabezado de cada página de Sinaloa)
+    excluir = _palabras_del_lugar(con, alcance)
+    candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, excluir=excluir, **alcance)
     if not candidatas and alcance:
         candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4)
         if candidatas and registro is not None:
@@ -263,6 +266,17 @@ def paginas_relevantes(con, pregunta: str, filtros: dict, registro: dict | None 
         nombre = normalizar(con.execute("SELECT nombre FROM municipios WHERE id = ?", (municipio_id,)).fetchone()["nombre"])
         candidatas.sort(key=lambda c: nombre not in normalizar(c["texto"]))  # estable: respeta la relevancia
     return candidatas[:PAGINAS_RELEVANTES]
+
+
+def _palabras_del_lugar(con, alcance: dict) -> frozenset:
+    nombres = []
+    if alcance.get("estado_id"):
+        nombres += [f[0] for f in con.execute("SELECT nombre FROM estados WHERE id = ?", (alcance["estado_id"],))]
+    if alcance.get("municipio_y_su_estado"):
+        nombres += list(con.execute(
+            "SELECT m.nombre, e.nombre FROM municipios m JOIN estados e ON e.id = m.estado_id WHERE m.id = ?",
+            (alcance["municipio_y_su_estado"],)).fetchone() or ())
+    return frozenset(normalizar(p) for n in nombres for p in n.split() if len(p) >= 3)
 
 
 def _con_paginas_relevantes(con, pregunta: str, filtros: dict, uso: dict, registro: dict) -> dict:

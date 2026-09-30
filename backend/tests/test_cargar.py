@@ -154,3 +154,53 @@ def test_procesa_varios_a_la_vez(entorno):
     assert (r["procesados"], r["fallidos"]) == (6, 0)
     assert {d["estatus"] for d in documentos(con)} == {"listo"}
     assert con.execute("SELECT COUNT(*) FROM paginas p JOIN documentos d ON d.id = p.documento_id WHERE d.titulo LIKE 'Documento %'").fetchone()[0] == 18
+
+
+def test_puede_omitir_los_pdf_escaneados(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    (pdfs / "escaneado.pdf").write_bytes(pdf_con_texto([""]))  # una página sin texto
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\n"
+                                "escaneado.pdf,Guanajuato,,informes,Escaneado,2025\n"
+                                "informe-estatal.pdf,Guanajuato,,informes,Informe,2025\n")
+    r = cargar.cargar(con, csv, pdfs, omitir_escaneados=True)
+    assert (r["procesados"], r["fallidos"], len(r["escaneados"])) == (1, 0, 1)
+    assert [d["titulo"] for d in documentos(con)] == ["Informe"]  # el escaneado no queda en la base
+
+
+def test_procesa_con_varios_procesos(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    filas = []
+    for i in range(4):
+        (pdfs / f"proc{i}.pdf").write_bytes(pdf_con_texto([f"Documento {i} con presupuesto de ${i + 1},000 pesos"] * 2))
+        filas.append(f"proc{i}.pdf,Guanajuato,,informes,Proceso {i},2025")
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\n" + "\n".join(filas) + "\n")
+    r = cargar.cargar(con, csv, pdfs, procesos=2)
+    assert (r["procesados"], r["fallidos"]) == (4, 0)
+    assert cargar.cargar(con, csv, pdfs, procesos=2)["saltados"] == 4  # volver a correrlo no duplica
+
+
+def test_los_escaneados_se_anotan_y_no_se_vuelven_a_leer(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    (pdfs / "escaneado.pdf").write_bytes(pdf_con_texto([""]))
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\nescaneado.pdf,Guanajuato,,informes,Escaneado,2025\n")
+    lista = carpeta / "pendientes_ocr.txt"
+    r = cargar.cargar(con, csv, pdfs, omitir_escaneados=True, lista_escaneados=lista)
+    assert len(r["escaneados"]) == 1 and lista.read_text(encoding="utf-8").strip().endswith("escaneado.pdf")
+    otra = cargar.cargar(con, csv, pdfs, omitir_escaneados=True, lista_escaneados=lista)
+    assert (otra["escaneados_previos"], otra["escaneados"], otra["procesados"]) == (1, [], 0)
+
+
+def test_el_mismo_archivo_con_otro_nombre_no_se_duplica(entorno):
+    import hashlib
+    import shutil
+
+    cargar, con, carpeta, pdfs = entorno
+    shutil.copy(pdfs / "presupuesto-leon.pdf", pdfs / "copia.pdf")
+    huella = hashlib.sha256((pdfs / "copia.pdf").read_bytes()).hexdigest()
+    encabezado = "archivo,estado,municipio,seccion,titulo,anio,url_fuente,formato,sha256,fecha_publicacion,dependencia\n"
+    uno = escribir_csv(carpeta, encabezado + f"presupuesto-leon.pdf,Guanajuato,León,presupuesto,Original,2026,,pdf,{huella},,\n")
+    assert cargar.cargar(con, uno, pdfs)["procesados"] == 1
+    otro = escribir_csv(carpeta, encabezado + f"copia.pdf,Guanajuato,,presupuesto,Copia,2026,,pdf,{huella},,\n")
+    r = cargar.cargar(con, otro, pdfs)
+    assert (r["procesados"], r["saltados"]) == (0, 1)
+    assert [d["titulo"] for d in documentos(con)] == ["Original"]

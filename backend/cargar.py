@@ -5,6 +5,7 @@
     python cargar.py --solo-revisar   # revisa el CSV y los PDFs sin procesar nada
     python cargar.py --reprocesar     # vuelve a procesar también los que ya estaban listos
     python cargar.py --hilos 4        # cuántos documentos se procesan a la vez (por defecto 3)
+    python cargar.py --procesos 6 --omitir-escaneados   # muchos PDF sin IA: usa 6 núcleos y omite escaneados
 
 Formato del CSV (se acepta separado por comas o por punto y coma, como lo guarda Excel):
 
@@ -34,7 +35,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -179,6 +180,9 @@ def registrar(con: sqlite3.Connection, doc: dict, reprocesar: bool) -> int | Non
     datos = tuple(doc[c] for c in columnas)
     if existente and existente["estatus"] == "listo" and not reprocesar:
         return None
+    if not existente and doc.get("sha256"):  # el mismo archivo con otro nombre: ya está cargado, no se duplica
+        if con.execute("SELECT 1 FROM documentos WHERE sha256 = ?", (doc["sha256"].lower(),)).fetchone():
+            return None
     if existente:  # quedó a medias, con error, o se pidió reprocesar: se actualiza con lo que diga el CSV
         con.execute(
             f"UPDATE documentos SET {', '.join(f'{c} = ?' for c in columnas)} WHERE id = ?", (*datos, existente["id"])
@@ -192,66 +196,92 @@ def registrar(con: sqlite3.Connection, doc: dict, reprocesar: bool) -> int | Non
     return documento_id
 
 
-def _procesar_en_hilo(ruta_db: str, documento_id: int, ruta_pdf: Path) -> tuple[dict, sqlite3.Row]:
-    """Cada hilo usa su propia conexión: SQLite no comparte una conexión entre hilos."""
+def _cargar_uno(ruta_db: str, doc: dict, reprocesar: bool, omitir_escaneados: bool) -> dict:
+    """Registra y procesa un documento con su propia conexión. Sirve igual en un hilo que en otro proceso.
+
+    Se registra aquí y no antes, para que la página no se llene de documentos "pendientes" durante la carga."""
     con = sqlite3.connect(ruta_db, timeout=120)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     try:
-        procesamiento.procesar(con, documento_id, ruta_pdf)
-        fila = con.execute(
+        documento_id = registrar(con, doc, reprocesar)
+        if documento_id is None:
+            return {"estado": "saltado"}
+        procesamiento.procesar(con, documento_id, doc["ruta"])
+        fila = dict(con.execute(
             "SELECT estatus, error, total_paginas, (SELECT COUNT(*) FROM puntos_clave WHERE documento_id = d.id) AS puntos"
             " FROM documentos d WHERE id = ?",
             (documento_id,),
-        ).fetchone()
-        return procesamiento.BITACORA.pop(documento_id), fila
+        ).fetchone())
+        bitacora = procesamiento.BITACORA.pop(documento_id)
+        if fila["estatus"] != "listo" and omitir_escaneados and "texto seleccionable" in (fila["error"] or ""):
+            # Escaneado: sin texto no se puede buscar ni citar. Se quita de la base y queda para OCR.
+            con.execute("DELETE FROM documentos WHERE id = ?", (documento_id,))
+            con.commit()
+            return {"estado": "escaneado", "id": documento_id, "bitacora": bitacora}
+        return {"estado": fila["estatus"], "id": documento_id, "bitacora": bitacora, **fila}
     finally:
         con.close()
 
 
 def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reprocesar=False, solo_revisar=False,
-           hilos: int = 3) -> dict:
+           hilos: int = 3, omitir_escaneados: bool = False, procesos: int = 0,
+           lista_escaneados: Path | None = None) -> dict:
+    """Carga los documentos del CSV. Con `procesos` > 0 usa varios núcleos (leer PDFs es trabajo de CPU,
+    y los hilos de Python no lo reparten); si no, `hilos` hilos (bien para la IA, que es esperar la red)."""
     validos, errores, avisos = validar(con, leer_csv(ruta_csv), carpeta_pdfs)
     for e in errores:
         print(f"  ERROR {e}")
     for a in avisos:
         print(f"  REVISAR {a}")
     resultado = {"procesados": 0, "saltados": 0, "fallidos": 0, "invalidos": len(errores), "avisos": len(avisos),
-                 "uso": {}, "segundos": 0.0}
+                 "escaneados": [], "uso": {}, "segundos": 0.0}
     if solo_revisar:
         print(f"Revisión: {len(validos)} filas correctas ({len(avisos)} para revisar), {len(errores)} con errores."
               " No se procesó nada.")
         return resultado
 
-    motor = llm.modelo() if llm.configurado() else "respaldo sin IA (no hay DEEPSEEK_API_KEY en backend/.env)"
-    inicio = time.time()
-    pendientes = []
-    for doc in validos:  # el registro es rápido y en orden; lo lento (leer el PDF y la IA) va en paralelo
-        documento_id = registrar(con, doc, reprocesar)
-        if documento_id is None:
-            resultado["saltados"] += 1
-            print(f"  {doc['titulo']} - {doc['lugar']}: ya estaba cargado, se salta")
-        else:
-            pendientes.append((doc, documento_id))
-    print(f"{len(pendientes)} documentos por procesar · motor: {motor} · {hilos} a la vez", flush=True)
+    # Los escaneados de vueltas anteriores no se vuelven a leer: ya se sabe que no tienen texto.
+    ya_escaneados = set()
+    if omitir_escaneados and lista_escaneados and lista_escaneados.is_file():
+        ya_escaneados = set(lista_escaneados.read_text(encoding="utf-8").split("\n")) - {""}
+        antes = len(validos)
+        validos = [d for d in validos if d["archivo"] not in ya_escaneados]
+        resultado["escaneados_previos"] = antes - len(validos)
+        print(f"{resultado['escaneados_previos']} escaneados de vueltas anteriores se saltan ({lista_escaneados.name})")
 
+    motor = llm.modelo() if llm.configurado() else "respaldo sin IA (no hay DEEPSEEK_API_KEY en backend/.env)"
+    a_la_vez = f"{procesos} procesos" if procesos > 0 else f"{hilos} hilos"
+    print(f"{len(validos)} documentos · motor: {motor} · {a_la_vez}", flush=True)
+    inicio = time.time()
     ruta_db = con.execute("PRAGMA database_list").fetchone()["file"]
-    with ThreadPoolExecutor(max_workers=max(1, hilos)) as grupo:
-        tareas = {grupo.submit(_procesar_en_hilo, ruta_db, documento_id, doc["ruta"]): (doc, documento_id)
-                  for doc, documento_id in pendientes}
+    grupo = ProcessPoolExecutor(max_workers=procesos) if procesos > 0 else ThreadPoolExecutor(max_workers=max(1, hilos))
+    with grupo:
+        tareas = {grupo.submit(_cargar_uno, ruta_db, doc, reprocesar, omitir_escaneados): doc for doc in validos}
         for n, tarea in enumerate(as_completed(tareas), start=1):
-            doc, documento_id = tareas[tarea]
-            bitacora, fila = tarea.result()
+            doc = tareas[tarea]
+            r = tarea.result()
+            prefijo = f"[{n}/{len(validos)}] {doc['titulo']} - {doc['lugar']}"
+            if r["estado"] == "saltado":
+                resultado["saltados"] += 1
+                print(f"{prefijo}: ya estaba cargado, se salta", flush=True)
+                continue
+            bitacora = r["bitacora"]
             for k, v in bitacora["uso"].items():
                 resultado["uso"][k] = resultado["uso"].get(k, 0) + v
-            prefijo = f"[{n}/{len(pendientes)}] {doc['titulo']} - {doc['lugar']}"
-            if fila["estatus"] == "listo":
+            if r["estado"] == "listo":
                 resultado["procesados"] += 1
-                print(f"{prefijo}\n    listo (id {documento_id}): {fila['total_paginas']} páginas, {fila['puntos']} puntos"
+                print(f"{prefijo}\n    listo (id {r['id']}): {r['total_paginas']} páginas, {r['puntos']} puntos"
                       f" · {bitacora['motor']} · {bitacora['segundos']} s · ${bitacora['costo_usd']:.4f} USD", flush=True)
+            elif r["estado"] == "escaneado":
+                resultado["escaneados"].append(doc["archivo"])
+                if lista_escaneados:  # se anota al momento: si la carga se interrumpe, no se pierde
+                    with lista_escaneados.open("a", encoding="utf-8") as f:
+                        f.write(doc["archivo"] + "\n")
+                print(f"{prefijo}  (escaneado, sin texto: se omite hasta tener OCR)", flush=True)
             else:
                 resultado["fallidos"] += 1
-                print(f"{prefijo}\n    ERROR (id {documento_id}): {fila['error']}", flush=True)
+                print(f"{prefijo}\n    ERROR (id {r['id']}): {r['error']}", flush=True)
             if bitacora["aviso"] and llm.configurado():
                 print(f"    Aviso: {bitacora['aviso']}")
 
@@ -260,7 +290,7 @@ def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reproces
     print(
         f"\nTerminado: {resultado['procesados']} procesados, {resultado['saltados']} ya estaban cargados,"
         f" {resultado['fallidos']} con error, {resultado['invalidos']} filas inválidas en el CSV,"
-        f" {resultado['avisos']} para revisar a mano."
+        f" {resultado['avisos']} para revisar a mano, {len(resultado['escaneados'])} escaneados omitidos (necesitan OCR)."
         f"\nTiempo total: {resultado['segundos']} s · tokens: {uso.get('entrada', 0):,} de entrada,"
         f" {uso.get('salida', 0):,} de salida · costo aprox.: ${llm.costo_usd(uso):.4f} USD"
     )
@@ -274,13 +304,21 @@ def main() -> int:
     parser.add_argument("--reprocesar", action="store_true", help="procesa también los que ya están listos")
     parser.add_argument("--solo-revisar", action="store_true", help="revisa el CSV sin procesar nada")
     parser.add_argument("--hilos", type=int, default=3, help="documentos que se procesan a la vez")
+    parser.add_argument("--procesos", type=int, default=0,
+                        help="usa N núcleos (rápido para cargar muchos PDF sin IA); 0 = usar hilos")
+    parser.add_argument("--omitir-escaneados", action="store_true",
+                        help="no deja en la base los PDF escaneados (sin texto); los lista para hacerles OCR después")
     args = parser.parse_args()
     if not args.csv.is_file():
         print(f"No existe {args.csv}")
         return 1
     con = db.abrir()
     try:
-        r = cargar(con, args.csv, args.pdfs, args.reprocesar, args.solo_revisar, args.hilos)
+        lista = args.csv.with_name("pendientes_ocr.txt")
+        r = cargar(con, args.csv, args.pdfs, args.reprocesar, args.solo_revisar, args.hilos, args.omitir_escaneados,
+                   args.procesos, lista)
+        if r["escaneados"] or r.get("escaneados_previos"):
+            print(f"Lista de escaneados para OCR: {lista}")
     finally:
         con.close()
     return 1 if r["fallidos"] or r["invalidos"] else 0

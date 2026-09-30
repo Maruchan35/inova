@@ -36,3 +36,6 @@ backend/subidos/
 datos/pdfs/*
 !datos/pdfs/.gitkeep
 
+
+# Documentos que baja el recolector (gigas): no se suben, se regeneran con backend/recolector
+documentos/
