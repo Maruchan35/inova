@@ -126,3 +126,10 @@ def test_la_bitacora_publica_no_muestra_codigos(cliente):
     ultimo = cliente.get("/api/prueba/avisos").json()[0]
     assert ultimo["estatus"] == "prueba" and "*••••••*" in ultimo["texto"]
     assert not any(c.isdigit() for c in ultimo["texto"].split("*")[1])
+
+
+def test_desde_un_municipio_basta_con_el_municipio(cliente, avisos):
+    r = cliente.post("/api/suscripciones", json={"telefono": "4621010101", "estado_id": None, "municipio_id": 1})
+    assert r.status_code == 202 and r.json()["lugar"] == "Irapuato"
+    assert cliente.post("/api/suscripciones", json={"telefono": "4621010101"}).status_code == 400
+    assert cliente.post("/api/suscripciones", json={"telefono": "4621010101", "municipio_id": 999999}).status_code == 400
