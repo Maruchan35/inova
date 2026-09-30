@@ -98,3 +98,59 @@ def test_solo_revisar_no_toca_la_base(entorno):
     r = cargar.cargar(con, csv, pdfs, solo_revisar=True)
     assert (r["procesados"], r["invalidos"]) == (0, 0)
     assert documentos(con) == []
+
+
+def con_metadatos(datos: bytes, meta: dict) -> bytes:
+    import io
+
+    from pypdf import PdfReader, PdfWriter
+
+    w = PdfWriter(clone_from=PdfReader(io.BytesIO(datos)))
+    w.add_metadata(meta)
+    salida = io.BytesIO()
+    w.write(salida)
+    return salida.getvalue()
+
+
+def test_metadatos_oficiales_y_huella_sha256(entorno, capsys):
+    import hashlib
+
+    cargar, con, carpeta, pdfs = entorno
+    huella = hashlib.sha256((pdfs / "presupuesto-leon.pdf").read_bytes()).hexdigest()
+    (pdfs / "tabla.xlsx").write_bytes(b"PK\x03\x04 hoja de calculo")
+    csv = escribir_csv(carpeta, (
+        "archivo,estado,municipio,seccion,titulo,anio,url_fuente,formato,sha256,fecha_publicacion,dependencia\n"
+        f"presupuesto-leon.pdf,Guanajuato,León,presupuesto,Presupuesto,2026,https://leon.gob.mx/p.pdf,pdf,{huella},2026-01-10,Tesorería\n"
+        f"informe-estatal.pdf,Guanajuato,,informes,Informe,2025,,pdf,{'0' * 64},,\n"
+        "tabla.xlsx,Guanajuato,,presupuesto,Tabla,2025,,xlsx,,,\n"
+    ))
+    r = cargar.cargar(con, csv, pdfs)
+    assert (r["procesados"], r["invalidos"]) == (1, 2)
+    (doc,) = documentos(con)
+    assert (doc["url_fuente"], doc["formato"], doc["sha256"], doc["fecha_publicacion"], doc["dependencia"]) == (
+        "https://leon.gob.mx/p.pdf", "pdf", huella, "2026-01-10", "Tesorería")
+    salida = capsys.readouterr().out
+    assert "Línea 3" in salida and "no coincide con su sha256" in salida
+    assert "Línea 4" in salida and "xlsx todavía no se procesa" in salida
+
+
+def test_avisa_si_el_pdf_parece_impreso_desde_un_navegador(entorno, capsys):
+    cargar, con, carpeta, pdfs = entorno
+    (pdfs / "impreso.pdf").write_bytes(con_metadatos(pdf_con_texto(PAGINAS), {"/Producer": "Skia/PDF m136", "/Creator": "Chromium"}))
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\nimpreso.pdf,Guanajuato,,informes,Impreso,2025\n")
+    r = cargar.cargar(con, csv, pdfs)
+    assert (r["procesados"], r["avisos"]) == (1, 1)  # se carga, pero se marca para revisarlo a mano
+    assert "REVISAR" in capsys.readouterr().out
+
+
+def test_procesa_varios_a_la_vez(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    filas = []
+    for i in range(6):
+        (pdfs / f"doc{i}.pdf").write_bytes(pdf_con_texto([f"Documento {i} con presupuesto de ${i + 1},000 pesos"] * 3))
+        filas.append(f"doc{i}.pdf,Guanajuato,,informes,Documento {i},2025")
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\n" + "\n".join(filas) + "\n")
+    r = cargar.cargar(con, csv, pdfs, hilos=3)
+    assert (r["procesados"], r["fallidos"]) == (6, 0)
+    assert {d["estatus"] for d in documentos(con)} == {"listo"}
+    assert con.execute("SELECT COUNT(*) FROM paginas p JOIN documentos d ON d.id = p.documento_id WHERE d.titulo LIKE 'Documento %'").fetchone()[0] == 18
