@@ -27,6 +27,8 @@ antes de actuar.
 - **Responsables:** datos: Marko · backend: Jorge · frontend: Alisson.
 - **Cómo se ejecuta** (tres terminales, desde la raíz del repo):
   1. `python datos/init_db.py` (crea `datos/cabildo.db`; repetir cuando cambie el esquema o los datos)
+     - **Base completa con los documentos oficiales:** `python datos/descargar_base.py` (baja la última
+       versión de los Releases de GitHub). `init_db.py` la borra y deja solo la base de ejemplo.
   2. `cd backend` → `python -m venv .venv` → `.venv\Scripts\activate` (Windows) o
      `source .venv/bin/activate` (Mac/Linux) → `pip install -r requirements.txt` →
      `uvicorn app.main:app --reload --port 8000`
