@@ -66,7 +66,7 @@ def listar_estados(con: Con = Depends(conectar)):
 
 @app.get("/api/estados/{estado_id}")
 def ver_estado(estado_id: int, con: Con = Depends(conectar)):
-    estado = con.execute("SELECT id, nombre FROM estados WHERE id = ?", (estado_id,)).fetchone()
+    estado = con.execute("SELECT id, nombre, latitud, longitud FROM estados WHERE id = ?", (estado_id,)).fetchone()
     if estado is None:
         raise HTTPException(status_code=404, detail="Estado no encontrado")
     municipios = con.execute(
@@ -84,7 +84,7 @@ def ver_estado(estado_id: int, con: Con = Depends(conectar)):
 def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
     fila = con.execute(
         """
-        SELECT m.id, m.nombre, e.id AS estado_id, e.nombre AS estado_nombre
+        SELECT m.id, m.nombre, m.latitud, m.longitud, e.id AS estado_id, e.nombre AS estado_nombre
         FROM municipios m JOIN estados e ON e.id = m.estado_id WHERE m.id = ?
         """,
         (municipio_id,),
@@ -95,6 +95,8 @@ def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
         "tipo": "municipio",
         "id": fila["id"],
         "nombre": fila["nombre"],
+        "latitud": fila["latitud"],
+        "longitud": fila["longitud"],
         "estado": {"id": fila["estado_id"], "nombre": fila["estado_nombre"]},
         "secciones": _secciones_con_documentos(con, fila["estado_id"], fila["id"]),
     }

@@ -28,6 +28,13 @@ def test_estado_solo_muestra_documentos_estatales(cliente):
     assert {"Irapuato", "León", "Celaya"} <= {m["nombre"] for m in datos["municipios"]}
 
 
+def test_lugares_traen_coordenadas_reales(cliente):
+    irapuato = cliente.get("/api/municipios/1").json()
+    assert round(irapuato["latitud"], 1) == 20.7 and round(irapuato["longitud"], 1) == -101.4
+    guanajuato = cliente.get("/api/estados/1").json()
+    assert guanajuato["latitud"] and guanajuato["longitud"]
+
+
 def test_lugar_inexistente(cliente):
     assert cliente.get("/api/municipios/99").status_code == 404
     assert cliente.get("/api/estados/99").status_code == 404

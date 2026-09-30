@@ -22,8 +22,8 @@ import httpx
 
 from . import config  # noqa: F401  (carga backend/.env)
 
-# Temporal: estas tablas pertenecen a datos/schema.sql (bloque datos). Mientras Marko las agrega,
-# el backend las crea si no existen; cuando estén en el esquema, esto no hace nada.
+# Copia de las tablas de datos/schema.sql (bloque datos): solo sirve para bases creadas antes de que
+# existieran; con el esquema actual no hace nada.
 TABLAS = """
 CREATE TABLE IF NOT EXISTS suscripciones (
     id            INTEGER PRIMARY KEY,

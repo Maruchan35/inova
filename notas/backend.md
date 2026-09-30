@@ -59,8 +59,9 @@
     `POST /api/suscripciones/baja`; internas: `POST /api/interno/baja` (token del bot), `GET /api/prueba/avisos`.
   - `.env`: `WHATSAPP_BOT_URL`, `WHATSAPP_BOT_TOKEN`, `ENLACE_DOCUMENTO` (dirección pública con `{id}`).
     Sin `WHATSAPP_BOT_URL` es "modo prueba": los mensajes solo quedan en `/api/prueba/avisos`.
-  - Tablas `suscripciones` y `notificaciones`: el backend las crea si no existen **mientras Marko las pasa a
-    `datos/schema.sql`**. 7 tests en `tests/test_notificaciones.py` (44 en total).
+  - Tablas `suscripciones` y `notificaciones` en `datos/schema.sql` (PR #7 de Marko). 8 tests en
+    `tests/test_notificaciones.py`. `/api/estados/{id}` y `/api/municipios/{id}` traen `latitud`/`longitud`
+    reales (catálogo INEGI) para el mapa. 46 tests en total.
 
 ## Tareas (en orden)
 
