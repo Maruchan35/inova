@@ -68,10 +68,29 @@ def limpiar_cache() -> None:
         _candados.clear()
 
 
+# Qué se le dice a la página sobre el origen de cada respuesta (campo "detalle").
+ORIGEN_PUBLICO = {"DeepSeek": "ia", "caché propio": "cache", "respaldo sin IA": "sin_ia",
+                  "búsqueda sin resultados": "sin_resultados", "sin pregunta": "sin_resultados"}
+
+
 def responder(con: sqlite3.Connection, pregunta: str, **filtros) -> dict:
+    """Respuesta con el formato de /api/preguntar, más "detalle": de dónde salió, cuánto tardó y cuánto costó."""
+    registro = {"pregunta": pregunta.strip()[:500], "origen": None, "modo": None, "uso": {}, "aviso": None}
+    resultado = _responder(con, registro, **filtros)
+    resultado["detalle"] = {
+        "origen": ORIGEN_PUBLICO.get(registro["origen"], "sin_ia"),
+        "modo": registro["modo"],
+        "segundos": registro["segundos"],
+        "costo_usd": registro["costo_usd"],
+        "motivo": ("La IA no está disponible en este momento; se muestran los fragmentos encontrados."
+                   if registro["origen"] == "respaldo sin IA" else None),
+    }
+    return resultado
+
+
+def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
     inicio = time.time()
-    pregunta = pregunta.strip()[:500]
-    registro = {"pregunta": pregunta, "origen": None, "modo": None, "uso": {}, "aviso": None}
+    pregunta = registro["pregunta"]
     try:
         if not normalizar(pregunta):
             registro["origen"] = "sin pregunta"

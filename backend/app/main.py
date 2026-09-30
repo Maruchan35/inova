@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from . import config, notificaciones, preguntas, procesamiento
@@ -102,11 +102,22 @@ def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
     }
 
 
+def _pdf_original(archivo: str | None) -> Path | None:
+    """El PDF que se procesó, si sigue en esta computadora. Rutas relativas: desde la raíz del repo."""
+    if not archivo:
+        return None
+    ruta = Path(archivo)
+    if not ruta.is_absolute():
+        ruta = config.BACKEND.parent / ruta
+    return ruta if ruta.suffix.lower() == ".pdf" and ruta.is_file() else None
+
+
 @app.get("/api/documentos/{documento_id}")
 def ver_documento(documento_id: int, con: Con = Depends(conectar)):
     d = con.execute(
         """
-        SELECT d.id, d.titulo, d.anio, d.fecha, d.total_paginas, d.estatus, d.error, d.resumen,
+        SELECT d.id, d.titulo, d.anio, d.fecha, d.total_paginas, d.estatus, d.error, d.resumen, d.archivo,
+               d.url_fuente, d.formato, d.fecha_publicacion, d.dependencia,
                s.clave AS seccion_clave, s.nombre AS seccion_nombre,
                e.id AS estado_id, e.nombre AS estado_nombre,
                m.id AS municipio_id, m.nombre AS municipio_nombre
@@ -125,6 +136,8 @@ def ver_documento(documento_id: int, con: Con = Depends(conectar)):
     ).fetchall()
     return {
         **{k: d[k] for k in ("id", "titulo", "anio", "fecha", "total_paginas", "estatus", "error", "resumen")},
+        "fuente": {k: d[k] for k in ("url_fuente", "formato", "fecha_publicacion", "dependencia")},
+        "pdf_url": f"/api/documentos/{documento_id}/pdf" if _pdf_original(d["archivo"]) else None,
         "seccion": {"clave": d["seccion_clave"], "nombre": d["seccion_nombre"]},
         "estado": {"id": d["estado_id"], "nombre": d["estado_nombre"]},
         "municipio": {"id": d["municipio_id"], "nombre": d["municipio_nombre"]} if d["municipio_id"] else None,
@@ -136,7 +149,8 @@ def ver_documento(documento_id: int, con: Con = Depends(conectar)):
 def ver_pagina(documento_id: int, numero: int, con: Con = Depends(conectar)):
     fila = con.execute(
         """
-        SELECT d.id AS documento_id, d.titulo AS documento_titulo, p.numero AS pagina, p.texto
+        SELECT d.id AS documento_id, d.titulo AS documento_titulo, p.numero AS pagina, p.texto,
+               d.total_paginas, d.archivo
         FROM paginas p JOIN documentos d ON d.id = p.documento_id
         WHERE d.id = ? AND p.numero = ?
         """,
@@ -144,7 +158,20 @@ def ver_pagina(documento_id: int, numero: int, con: Con = Depends(conectar)):
     ).fetchone()
     if fila is None:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    return dict(fila)
+    pagina = {k: fila[k] for k in ("documento_id", "documento_titulo", "pagina", "texto", "total_paginas")}
+    pagina["pdf_url"] = (f"/api/documentos/{documento_id}/pdf#page={numero}"
+                         if _pdf_original(fila["archivo"]) else None)
+    return pagina
+
+
+@app.get("/api/documentos/{documento_id}/pdf")
+def ver_pdf_original(documento_id: int, con: Con = Depends(conectar)):
+    """El PDF original tal cual se procesó, para verificar cada dato en su página (#page=N)."""
+    fila = con.execute("SELECT titulo, archivo FROM documentos WHERE id = ?", (documento_id,)).fetchone()
+    ruta = _pdf_original(fila["archivo"]) if fila else None
+    if ruta is None:
+        raise HTTPException(status_code=404, detail="El PDF original no está disponible")
+    return FileResponse(ruta, media_type="application/pdf", headers={"Content-Disposition": "inline"})
 
 
 @app.get("/api/buscar")
