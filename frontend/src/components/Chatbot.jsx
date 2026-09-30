@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { api } from '../api.js';
 import Fragmento from './Fragmento.jsx';
 
@@ -36,13 +36,13 @@ export default function Chatbot({ filtros, onVerPagina }) {
   return (
     <div className="chatbot-container">
       <div className="chat-toggle" onClick={() => setOpen(!open)}>
-        <i className={open ? "fa-solid fa-xmark" : "fa-solid fa-robot"}></i>
+        <i className={open ? "fa-solid fa-xmark" : "fa-regular fa-message"}></i>
       </div>
       {open && (
         <div className="chat-window">
           <div className="chat-header">
-            <h4><i className="fa-solid fa-book-open-reader"></i> Asistente IA</h4>
-            <i className="fa-solid fa-xmark close-btn" onClick={() => setOpen(false)}></i>
+            <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
+            <i className="fa-solid fa-xmark close-btn" onClick={() => setOpen(false)} style={{ cursor: 'pointer' }}></i>
           </div>
           <div className="chat-messages" ref={bodyRef}>
             {mensajes.map((m, i) => (
@@ -74,7 +74,7 @@ export default function Chatbot({ filtros, onVerPagina }) {
               placeholder="Ej. ¿Cuánto costó el hospital?"
               onKeyDown={e => e.key === 'Enter' && enviar()}
             />
-            <button onClick={enviar}><i className="fa-solid fa-paper-plane"></i></button>
+            <button onClick={enviar}><i className="fa-regular fa-paper-plane"></i></button>
           </div>
         </div>
       )}
