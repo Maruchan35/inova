@@ -77,6 +77,11 @@
 - **Versión 2 en `main` (etiqueta `v2.0`)**: backend + datos de Marko (catálogo INEGI, metadatos, tablas de
   avisos) + frontend de Alisson (direcciones propias, formulario de WhatsApp, mapa con coordenadas reales).
   Probado de punta a punta el 29 de sep de 2026: el bot envió código, bienvenida y el aviso del informe real.
+- `cargar.py` ya guarda los metadatos del CSV de Marko (`url_fuente`, `formato`, `sha256`, `fecha_publicacion`,
+  `dependencia`), **rechaza un archivo que no coincide con su sha256**, avisa si un PDF parece impreso desde un
+  navegador (así llegó el falso) y procesa varios a la vez (`--hilos`, 3 por defecto). Para montar los 65
+  documentos faltan los archivos (están en la computadora de Marko): ponerlos en `datos/pdfs/` y correr
+  `python cargar.py --solo-revisar` y luego `python cargar.py`.
 - Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
   columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
   cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.
