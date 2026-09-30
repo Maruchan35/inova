@@ -46,6 +46,22 @@
     de cada respuesta para la demo.
   - Con DeepSeek real y los datos de ejemplo: ~1 s y ~$0.0002 USD por pregunta.
   - 10 tests en `tests/test_preguntar.py` con IA simulada (37 en total).
+- **Avisos por WhatsApp** (rama `backend/notificaciones`):
+  - `backend/whatsapp/bot.js` (Node + Baileys): WhatsApp **normal** vinculado con QR como dispositivo
+    (http://127.0.0.1:3001/qr). Va contra las reglas de WhatsApp: usar un chip de repuesto. Manda en fila con
+    pausas de 4-9 s y atiende "BAJA". La sesión queda en `backend/whatsapp/sesion/` (ignorada por Git).
+    Arranque: `cd backend/whatsapp` → `npm install` → `npm start`.
+  - `backend/app/notificaciones.py`: suscribirse con código de 6 dígitos por WhatsApp (máx. 3 códigos por
+    número por hora), verificar, baja (token o "BAJA"), y aviso automático al terminar de procesar un
+    documento (título + 2 puntos clave con página + enlace). Un aviso por documento y teléfono.
+    Quien sigue un municipio recibe sus documentos y los estatales; quien sigue un estado, solo los estatales.
+  - Rutas nuevas (proponer en `docs/api.md`): `POST /api/suscripciones`, `POST /api/suscripciones/verificar`,
+    `POST /api/suscripciones/baja`; internas: `POST /api/interno/baja` (token del bot), `GET /api/prueba/avisos`.
+  - `.env`: `WHATSAPP_BOT_URL`, `WHATSAPP_BOT_TOKEN`, `ENLACE_DOCUMENTO` (dirección pública con `{id}`).
+    Sin `WHATSAPP_BOT_URL` es "modo prueba": los mensajes solo quedan en `/api/prueba/avisos`.
+  - Tablas `suscripciones` y `notificaciones` en `datos/schema.sql` (PR #7 de Marko). 8 tests en
+    `tests/test_notificaciones.py`. `/api/estados/{id}` y `/api/municipios/{id}` traen `latitud`/`longitud`
+    reales (catálogo INEGI) para el mapa. 46 tests en total.
 
 ## Tareas (en orden)
 
@@ -58,8 +74,8 @@
 
 ## En progreso
 
-- Rama: `backend/respuesta-ia`
-- Tarea: cerebro de `/api/preguntar` listo y probado con DeepSeek real; pendiente PR a `main`
+- Rama: `backend/notificaciones`
+- Tarea: avisos por WhatsApp listos en modo prueba; falta vincular el número (QR) y probar con teléfonos reales
 
 ## Para retomar en una sesión nueva (léelo primero)
 

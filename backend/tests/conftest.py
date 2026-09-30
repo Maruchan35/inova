@@ -16,6 +16,7 @@ def cliente(tmp_path_factory):
     os.environ["DB_PATH"] = str(ruta)
     os.environ["SUBIDOS_DIR"] = str(tmp_path_factory.mktemp("subidos"))
     os.environ["DEEPSEEK_API_KEY"] = ""  # los tests nunca llaman a la IA real
+    os.environ["WHATSAPP_BOT_URL"] = ""  # ni mandan WhatsApps reales
 
     from fastapi.testclient import TestClient
     from app.main import app

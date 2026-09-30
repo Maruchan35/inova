@@ -30,9 +30,11 @@ Estados con sus municipios (para el buscador de lugar).
 #### `GET /api/municipios/{id}` y `GET /api/estados/{id}`
 Página de un lugar: todas las secciones (aunque estén vacías) con sus documentos.
 `/estados/{id}` trae solo los documentos **del gobierno estatal** y además la lista `municipios`.
+`latitud` y `longitud` son las de la cabecera (catálogo INEGI); pueden ser `null`.
 `404` si no existe.
 ```json
-{ "tipo": "municipio", "id": 1, "nombre": "Irapuato", "estado": { "id": 1, "nombre": "Guanajuato" },
+{ "tipo": "municipio", "id": 1, "nombre": "Irapuato", "latitud": 20.673752, "longitud": -101.356241,
+  "estado": { "id": 1, "nombre": "Guanajuato" },
   "secciones": [
     { "clave": "presupuesto", "nombre": "Presupuesto y finanzas",
       "documentos": [{ "id": 2, "titulo": "Presupuesto de Egresos 2026", "anio": 2026, "fecha": "2026-01-10",
@@ -89,6 +91,22 @@ mismo formato que los resultados de `/buscar`.
 ```
 Hoy `respuesta` es un texto fijo; el bloque backend la generará con IA a partir de las citas. El
 formato no cambia.
+
+### Avisos por WhatsApp
+
+Cuando se procesa un documento nuevo, el backend avisa por WhatsApp a quienes siguen ese lugar: quien
+sigue un municipio recibe sus documentos y los estatales; quien sigue un estado, solo los estatales.
+
+#### `POST /api/suscripciones`
+Recibe `{ "telefono": "462 123 4567", "estado_id": 1, "municipio_id": 1 }` (`municipio_id` `null` = el
+estado) y manda un código de 6 dígitos por WhatsApp. Responde `202` con
+`{ "estatus": "codigo_enviado", "lugar": "Irapuato" }`, o `{ "estatus": "ya_suscrito", "lugar": "Irapuato" }`
+si ya recibe avisos. Errores con `{ "detail": "..." }` para mostrarlo tal cual: `400` (número o lugar
+inválido), `429` (más de 3 códigos por número en una hora), `503` (no se pudo mandar el WhatsApp).
+
+#### `POST /api/suscripciones/verificar`
+Recibe `{ "telefono": "...", "codigo": "123456" }`. Responde `{ "estatus": "activa", "lugar": "Irapuato" }`
+o `400` si el código es incorrecto o venció (10 minutos). Para darse de baja se responde **BAJA** al WhatsApp.
 
 ### Indicadores
 
