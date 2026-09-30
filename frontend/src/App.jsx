@@ -5,6 +5,7 @@ import Lugar from './components/Lugar.jsx';
 import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
+import Suscripcion from './components/Suscripcion.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -53,27 +54,43 @@ export default function App() {
   const [chatbotAbierto, setChatbotAbierto] = useState(false);
   const [contexto, setContexto] = useState('todos los documentos'); // sobre qué pregunta el chatbot
 
+  const isDocumento = currentPath.startsWith('/documento/');
+  const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
+  const esPaginaPrincipal = currentPath === '/' || currentPath === '';
+
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      setPagina(null);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    setPagina(null);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (!isDocumento && !isLugar) setContexto('todos los documentos');
+  }, [currentPath, isDocumento, isLugar]);
+
   const navigate = (path) => {
     window.history.pushState(null, '', path);
     setCurrentPath(path);
+    setPagina(null);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const verPagina = (docId, numero) => api.pagina(docId, numero).then(setPagina).catch(() => {});
 
   let content = null;
   let chatbotFiltros = {};
-  const isDocumento = currentPath.startsWith('/documento/');
-  const isLugar = currentPath.startsWith('/estado/') || currentPath.startsWith('/municipio/');
 
-  useEffect(() => {
-    if (!isDocumento && !isLugar) setContexto('todos los documentos');
-  }, [isDocumento, isLugar]);
+  let lugarActual = { tipo: 'estado', id: 1 };
+  if (isLugar) {
+    const partes = currentPath.split('/');
+    lugarActual = { tipo: partes[1], id: parseInt(partes[2], 10) };
+  }
 
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
@@ -101,39 +118,48 @@ export default function App() {
   return (
     <>
       <header>
-        <div className="logo">
+        <div 
+          className="logo interactive-logo" 
+          onClick={() => {
+            navigate('/');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          title="Ir a Inicio"
+        >
           <i className="fa-regular fa-message"></i> CabildoAbierto
         </div>
         <nav>
           <ul>
-            <li>
-              <button className="btn-link" onClick={() => navigate('/')}>
-                Inicio
-              </button>
-            </li>
-            <li>
-              <button className="btn-link" onClick={() => {
-                navigate('/');
-                setTimeout(() => {
-                  const buscador = document.querySelector('.search-bar input');
-                  buscador?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  buscador?.focus();
-                }, 100);
-              }}>
-                Buscar lugar
-              </button>
-            </li>
-            <li>
-              <button className="btn-link" onClick={() => setChatbotAbierto(true)}>
-                Pregúntale a la IA
-              </button>
-            </li>
-            {(isLugar || isDocumento) && (
-              <li>
-                <button className="btn-link" onClick={() => window.history.back()}>
-                  <i className="fa-solid fa-arrow-left"></i> Volver
-                </button>
-              </li>
+            {!esPaginaPrincipal && (
+              <>
+                <li>
+                  <button className="btn-link" onClick={() => navigate('/')}>
+                    <i className="fa-solid fa-house" style={{ marginRight: '5px' }}></i> Inicio
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => {
+                    navigate('/');
+                    setTimeout(() => {
+                      const buscador = document.querySelector('.search-bar input');
+                      buscador?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      buscador?.focus();
+                    }, 100);
+                  }}>
+                    <i className="fa-solid fa-magnifying-glass" style={{ marginRight: '5px' }}></i> Buscar lugar
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => setChatbotAbierto(true)}>
+                    <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '5px' }}></i> Pregúntale a la IA
+                  </button>
+                </li>
+                <li>
+                  <button className="btn-link" onClick={() => window.history.back()}>
+                    <i className="fa-solid fa-arrow-left"></i> Volver
+                  </button>
+                </li>
+              </>
             )}
           </ul>
         </nav>
@@ -147,10 +173,15 @@ export default function App() {
         </ErrorBoundary>
       </main>
 
+      <Suscripcion key={currentPath} autoOpen={false} lugar={lugarActual} nombre={isLugar ? 'tu gobierno' : 'tu estado'} />
+
       <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>
-        <p>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</p>
+        <p>
+          &copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.
+          <span className="version-badge">v2.2.0</span>
+        </p>
       </footer>
     </>
   );

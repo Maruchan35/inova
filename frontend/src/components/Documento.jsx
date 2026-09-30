@@ -1,5 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api.js';
+
+/**
+ * Limpia fragmentos cortados y caracteres OCR residuales al inicio y final de un punto clave,
+ * asegurando que la oración inicie con mayúscula y sea completamente legible de corrido.
+ */
+function cleanPuntoText(texto) {
+  if (!texto) return '';
+  let s = texto.replace(/\ufffd/g, '').trim();
+  // Quitar elipsis, comas o restos numéricos huérfanos al inicio (ej. "...s ", "...,030,308")
+  s = s.replace(/^[….\s,-]+(?:\d+[,.\d]*)?\s*/, '');
+  // Quitar letras sueltas huérfanas al inicio de corte (ej. "...r, ", "...s ", "...cias ")
+  s = s.replace(/^[….\s,-]*[a-zA-ZáéíóúÁÉÍÓÚñÑ]{1,3}[,.\s-]+/, '');
+  // Quitar elipsis o símbolos al final
+  s = s.replace(/[….\s,-]+$/, '');
+  // Asegurar mayúscula inicial
+  if (s.length > 0) {
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return s.trim();
+}
 
 export default function Documento({ id, onVerPagina, onIr, onContexto }) {
   const [doc, setDoc] = useState(null);
@@ -14,7 +34,7 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
         setError(null);
         onContexto?.(d.titulo);
         if (d.estatus !== 'listo' && d.estatus !== 'error') {
-          interval = setTimeout(fetchDoc, 2000); // Polling every 2s
+          interval = setTimeout(fetchDoc, 2000); // Polling cada 2s
         }
       } catch (err) {
         setDoc(null);
@@ -23,68 +43,223 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
     };
     fetchDoc();
     return () => clearTimeout(interval);
-  }, [id]);
+  }, [id, onContexto]);
 
-  if (error) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>No pudimos abrir este documento: {error}</div>;
-  if (!doc) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando documento...</div>;
+  // Procesar puntos clave para lectura fluida y completa
+  const puntosProcesados = useMemo(() => {
+    if (!doc?.puntos_clave) return [];
+    return doc.puntos_clave.map((p) => {
+      return {
+        ...p,
+        textoLimpio: cleanPuntoText(p.texto)
+      };
+    });
+  }, [doc?.puntos_clave]);
+
+  if (error) {
+    return (
+      <div className="doc-error-container">
+        <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '2.5rem', color: '#e67e22', marginBottom: '1rem' }}></i>
+        <h3>No pudimos abrir este documento</h3>
+        <p className="tenue">{error}</p>
+        <button className="search-btn" onClick={() => onIr('/')} style={{ marginTop: '1.5rem' }}>
+          Volver al Inicio
+        </button>
+      </div>
+    );
+  }
+
+  if (!doc) {
+    return (
+      <div className="doc-loading-container">
+        <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: 'var(--accent-color)', marginBottom: '1rem' }}></i>
+        <p style={{ fontWeight: 500 }}>Cargando expediente oficial...</p>
+      </div>
+    );
+  }
+
   const fuente = doc.fuente || {};
+  const esResumenFallback = doc.resumen?.includes('sin IA') || doc.resumen?.includes('Resumen automático');
 
   return (
-    <>
+    <div className="doc-container">
+      {/* Miga de pan de navegación */}
       <nav className="migas">
         <button className="btn-link" onClick={() => onIr('/')}>Inicio</button> /{' '}
         <button className="btn-link" onClick={() => onIr(`/estado/${doc.estado.id}`)}>{doc.estado.nombre}</button>
-        {doc.municipio && <> / <button className="btn-link" onClick={() => onIr(`/municipio/${doc.municipio.id}`)}>{doc.municipio.nombre}</button></>}
+        {doc.municipio && (
+          <>
+            {' '} / <button className="btn-link" onClick={() => onIr(`/municipio/${doc.municipio.id}`)}>{doc.municipio.nombre}</button>
+          </>
+        )}
       </nav>
-      <div className="doc-detail-header" style={{ marginTop: '1rem' }}>
-        <p className="tenue" style={{ marginBottom: '10px' }}>
-          {doc.seccion.nombre} · {doc.municipio?.nombre ?? doc.estado.nombre} · {doc.anio}
-        </p>
-        <h2>{doc.titulo}</h2>
+
+      {/* Encabezado principal del documento */}
+      <div className="doc-detail-header">
+        <div className="doc-meta-pills">
+          <span className="doc-pill-tag">
+            <i className="fa-regular fa-folder" style={{ color: 'var(--accent-color)' }}></i> {doc.seccion.nombre}
+          </span>
+          <span className="doc-pill-tag">
+            <i className="fa-solid fa-location-dot" style={{ color: '#10b981' }}></i>
+            {doc.municipio?.nombre ? `${doc.municipio.nombre}, ${doc.estado.nombre}` : doc.estado.nombre}
+          </span>
+          {doc.anio && (
+            <span className="doc-pill-tag">
+              <i className="fa-regular fa-calendar"></i> Ejercicio {doc.anio}
+            </span>
+          )}
+          {doc.total_paginas > 0 && (
+            <span className="doc-pill-tag">
+              <i className="fa-regular fa-file-lines"></i> {doc.total_paginas} páginas
+            </span>
+          )}
+        </div>
+        <h2 className="doc-main-title">{doc.titulo}</h2>
       </div>
 
+      {/* Tarjeta de procedencia y fuente oficial */}
       {(fuente.dependencia || fuente.url_fuente || doc.pdf_url) && (
-        <div className="doc-fuente">
-          <strong>Documento oficial</strong>
-          {fuente.dependencia && <span>{fuente.dependencia}</span>}
-          {fuente.fecha_publicacion && <span>Publicado el {fuente.fecha_publicacion}</span>}
-          {doc.pdf_url && (
-            <a href={doc.pdf_url} target="_blank" rel="noopener noreferrer"><i className="fa-regular fa-file-pdf"></i> Abrir el PDF original</a>
-          )}
-          {fuente.url_fuente && (
-            <a href={fuente.url_fuente} target="_blank" rel="noopener noreferrer"><i className="fa-solid fa-arrow-up-right-from-square"></i> Portal oficial</a>
-          )}
+        <div className="doc-fuente-card">
+          <div className="doc-fuente-info">
+            <div className="doc-fuente-icon">
+              <i className="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--primary-color)' }}>Fuente Oficial del Expediente</strong>
+              {fuente.dependencia && <p className="doc-fuente-dep">{fuente.dependencia}</p>}
+              {fuente.fecha_publicacion && <span className="doc-fuente-fecha">Publicado: {fuente.fecha_publicacion}</span>}
+            </div>
+          </div>
+          <div className="doc-fuente-actions">
+            {doc.total_paginas > 0 && (
+              <button className="btn-pag-nav" onClick={() => onVerPagina(doc.id, 1)} title="Abrir visor interactivo">
+                <i className="fa-solid fa-table-cells"></i> Abrir visor interactivo
+              </button>
+            )}
+            {doc.pdf_url && (
+              <a href={doc.pdf_url} target="_blank" rel="noopener noreferrer" className="btn-doc-pdf">
+                <i className="fa-regular fa-file-pdf"></i> Abrir PDF original
+              </a>
+            )}
+            {fuente.url_fuente && (
+              <a href={fuente.url_fuente} target="_blank" rel="noopener noreferrer" className="btn-doc-web">
+                <i className="fa-solid fa-arrow-up-right-from-square"></i> Portal oficial
+              </a>
+            )}
+          </div>
         </div>
       )}
 
+      {/* Estado del procesamiento si aún no está listo */}
       {doc.estatus !== 'listo' ? (
-        <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', textAlign: 'center' }}>
-          <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}></i>
-          <p style={{ fontSize: '1.2rem', color: 'var(--primary-color)', fontWeight: 500 }}>Procesando documento...</p>
-          <p className="tenue">La IA está analizando y extrayendo los datos importantes ({doc.estatus}).</p>
+        <div className="doc-procesando-card">
+          <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: 'var(--accent-color)', marginBottom: '1rem' }}></i>
+          <p style={{ fontSize: '1.2rem', color: 'var(--primary-color)', fontWeight: 600 }}>Procesando documento...</p>
+          <p className="tenue">La IA está digitalizando y analizando los datos ({doc.estatus}).</p>
         </div>
       ) : (
         <>
-          <div className="doc-resumen">
-            <strong>Resumen del documento:</strong><br/><br/>
-            {doc.resumen}
+          {/* Ficha técnica y Resumen Ejecutivo */}
+          <div className="doc-section-card">
+            <div className="doc-section-header-row">
+              <h3 className="doc-section-title">
+                <i className="fa-solid fa-file-contract" style={{ color: 'var(--accent-color)' }}></i> Ficha de Síntesis y Resumen
+              </h3>
+              <span className="doc-status-badge">
+                <i className="fa-solid fa-circle-check" style={{ color: '#10b981', marginRight: '5px' }}></i> Documento Oficial Indexado
+              </span>
+            </div>
+
+            {/* Ficha informativa en cuadrícula limpia */}
+            <div className="doc-ficha-grid">
+              <div className="doc-ficha-item">
+                <span className="doc-ficha-label"><i className="fa-solid fa-building-columns"></i> Dependencia</span>
+                <strong className="doc-ficha-val">{fuente.dependencia || 'Gobierno Estatal / Municipal'}</strong>
+              </div>
+              <div className="doc-ficha-item">
+                <span className="doc-ficha-label"><i className="fa-solid fa-calendar-days"></i> Período / Ejercicio</span>
+                <strong className="doc-ficha-val">{doc.anio ? `Año Fiscal ${doc.anio}` : 'Vigente'}</strong>
+              </div>
+              <div className="doc-ficha-item">
+                <span className="doc-ficha-label"><i className="fa-solid fa-file-lines"></i> Extensión</span>
+                <strong className="doc-ficha-val">{doc.total_paginas > 0 ? `${doc.total_paginas} páginas` : 'Expediente digital'}</strong>
+              </div>
+              <div className="doc-ficha-item">
+                <span className="doc-ficha-label"><i className="fa-solid fa-map-pin"></i> Cobertura</span>
+                <strong className="doc-ficha-val">
+                  {doc.municipio?.nombre ? `${doc.municipio.nombre}, ${doc.estado.nombre}` : doc.estado.nombre}
+                </strong>
+              </div>
+            </div>
+
+            {/* Cuerpo del Resumen sin saltos bruscos */}
+            <div className="doc-resumen-body">
+              {esResumenFallback ? (
+                <p className="doc-resumen-desc">
+                  Este expediente oficial ha sido digitalizado e indexado para consulta ciudadana abierta. A continuación se desglosan los puntos clave, cifras y variaciones presupuestales detectadas en el documento, con acceso directo a la página original correspondiente.
+                </p>
+              ) : (
+                <p className="doc-resumen-desc">{doc.resumen}</p>
+              )}
+            </div>
           </div>
 
-          <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1.5rem' }}>Lo más importante</h3>
-          <ul className="doc-puntos">
-            {doc.puntos_clave.map((p, i) => (
-              <li key={i}>
-                <span style={{ paddingRight: '1rem', lineHeight: '1.5' }}>{p.texto}</span>
-                {p.pagina && (
-                  <button onClick={() => onVerPagina(doc.id, p.pagina)}>
-                    pág. {p.pagina}
+          {/* Desglose de Puntos Clave Extraídos */}
+          <div className="doc-section-card" style={{ marginTop: '2rem' }}>
+            <div className="doc-section-header-row">
+              <h3 className="doc-section-title">
+                <i className="fa-solid fa-chart-pie" style={{ color: 'var(--primary-color)' }}></i> Puntos y Cifras Clave del Documento
+              </h3>
+              <span className="tenue" style={{ fontSize: '0.85rem' }}>
+                {puntosProcesados.length} {puntosProcesados.length === 1 ? 'extracto relevante' : 'extractos relevantes'}
+              </span>
+            </div>
+
+            {puntosProcesados.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+                <p className="tenue">No se detectaron extractos específicos en este archivo.</p>
+                {doc.total_paginas > 0 && (
+                  <button className="btn-pag-nav" onClick={() => onVerPagina(doc.id, 1)} style={{ marginTop: '1rem' }}>
+                    <i className="fa-regular fa-file-lines"></i> Explorar páginas del documento
                   </button>
                 )}
-              </li>
-            ))}
-          </ul>
+              </div>
+            ) : (
+              <div className="doc-puntos-container">
+                {puntosProcesados.map((p, i) => (
+                  <div key={i} className="doc-punto-card">
+                    <div className="doc-punto-header">
+                      <div className="doc-punto-badge-num">
+                        <span>{i + 1}</span>
+                      </div>
+                      <span className="doc-punto-tipo">
+                        <i className="fa-regular fa-bookmark" style={{ color: 'var(--accent-color)', marginRight: '6px' }}></i>
+                        Extracto Relevante del Expediente
+                      </span>
+                      {p.pagina && (
+                        <button
+                          type="button"
+                          className="btn-punto-pag"
+                          onClick={() => onVerPagina(doc.id, p.pagina)}
+                          title="Ver página original en el visor interactivo"
+                        >
+                          <i className="fa-regular fa-file-lines"></i> Pág. {p.pagina}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Texto completo, fluido y de renglón continuo sin cortes abruptos */}
+                    <p className="doc-punto-text">
+                      {p.textoLimpio}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
-    </>
+    </div>
   );
 }

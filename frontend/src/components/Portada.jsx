@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
+import MapaMexico from './MapaMexico.jsx';
 
 function quitarAcentos(str) {
   return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
@@ -267,7 +268,12 @@ export default function Portada({ onElegir, onDocumento }) {
     <>
       <section className="hero">
         <h1>Explora la información de tu ciudad</h1>
-        <p>Busca cualquier estado o municipio y accede a informes, presupuestos y contratos al instante.</p>
+        <p style={{ maxWidth: '820px', margin: '0 auto 1.2rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+          En México existe información pública sobre presupuestos, contratos, proveedores y obras, pero suele estar dispersa en diferentes portales y documentos extensos, lo que dificulta su consulta y comprensión por parte de la ciudadanía.
+        </p>
+        <p style={{ maxWidth: '820px', margin: '0 auto 2.5rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+          <strong>CabildoAbierto AI</strong> busca solucionar esta barrera mediante inteligencia artificial y RAG, permitiendo realizar preguntas en lenguaje natural y obtener respuestas claras junto con su fuente y página correspondiente. Así, la información pública se vuelve más accesible, verificable y útil para la participación ciudadana.
+        </p>
         
         <div className="search-container" ref={wrapperRef}>
           <form className="search-bar" onSubmit={explorar}>
@@ -356,55 +362,43 @@ export default function Portada({ onElegir, onDocumento }) {
             </ul>
           )}
         </div>
+
+        {/* Mapa Interactivo de la República Mexicana directamente debajo del buscador */}
+        <div className="mapa-home-wrapper">
+          <div className="mapa-home-header">
+            <h3>
+              <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)', marginRight: '8px' }}></i>
+              Explora México en el Mapa Interactivo
+            </h3>
+            <p>Selecciona cualquier estado o haz clic en su pin para consultar sus informes oficiales, actas y municipios.</p>
+          </div>
+          <MapaMexico estados={estados} onElegirEstado={onElegir} />
+        </div>
       </section>
 
-      <section style={{ textAlign: 'center', marginTop: '3rem', overflow: 'hidden' }}>
-        <h3 style={{ color: 'var(--text-muted)', fontWeight: 400, marginBottom: '2rem' }}>¿Cómo funciona CabildoAbierto?</h3>
+      <section style={{ textAlign: 'center', marginTop: '3rem', marginBottom: '4rem', padding: '0 20px' }}>
+        <h3 style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '1.4rem', marginBottom: '2rem' }}>¿Cómo funciona CabildoAbierto?</h3>
         
-        <div className="como-funciona-container">
-          <div className="como-funciona-track">
-            <div className="cf-card">
-              <i className="fa-regular fa-file-pdf"></i>
-              <h4>1. Recopilación de datos</h4>
-              <p>Los gobiernos suben sus documentos públicos y reportes.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-solid fa-microchip"></i>
-              <h4>2. Procesamiento de IA</h4>
-              <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-regular fa-message"></i>
-              <h4>3. Búsqueda Inteligente</h4>
-              <p>Haces preguntas y recibes respuestas directas y claras.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-regular fa-check-circle"></i>
-              <h4>4. Verificación</h4>
-              <p>Revisas la fuente exacta con un solo clic.</p>
-            </div>
-            
-            {/* Duplicated for seamless loop */}
-            <div className="cf-card">
-              <i className="fa-regular fa-file-pdf"></i>
-              <h4>1. Recopilación de datos</h4>
-              <p>Los gobiernos suben sus documentos públicos y reportes.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-solid fa-microchip"></i>
-              <h4>2. Procesamiento de IA</h4>
-              <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-regular fa-message"></i>
-              <h4>3. Búsqueda Inteligente</h4>
-              <p>Haces preguntas y recibes respuestas directas y claras.</p>
-            </div>
-            <div className="cf-card">
-              <i className="fa-regular fa-check-circle"></i>
-              <h4>4. Verificación</h4>
-              <p>Revisas la fuente exacta con un solo clic.</p>
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', maxWidth: '1100px', margin: '0 auto' }}>
+          <div className="cf-card">
+            <i className="fa-regular fa-file-pdf"></i>
+            <h4>1. Recopilación de datos</h4>
+            <p>Los gobiernos publican sus documentos oficiales, presupuestos y reportes.</p>
+          </div>
+          <div className="cf-card">
+            <i className="fa-solid fa-microchip"></i>
+            <h4>2. Procesamiento de IA</h4>
+            <p>La IA extrae resúmenes ejecutivos, cifras auditables y puntos clave automáticamente.</p>
+          </div>
+          <div className="cf-card">
+            <i className="fa-regular fa-message"></i>
+            <h4>3. Búsqueda Inteligente</h4>
+            <p>Haces preguntas en lenguaje cotidiano y recibes respuestas directas y claras.</p>
+          </div>
+          <div className="cf-card">
+            <i className="fa-regular fa-check-circle"></i>
+            <h4>4. Verificación</h4>
+            <p>Revisas la fuente exacta y la página del documento con un solo clic.</p>
           </div>
         </div>
       </section>

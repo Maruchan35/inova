@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 
-export default function Suscripcion({ lugar }) {
+export default function Suscripcion({ lugar = { tipo: 'estado', id: 1 }, nombre = 'tu gobierno', autoOpen = false }) {
   const [telefono, setTelefono] = useState('');
   const [acepto, setAcepto] = useState(false);
   const [codigo, setCodigo] = useState('');
@@ -60,63 +60,87 @@ export default function Suscripcion({ lugar }) {
     }
   };
 
+  // Estado para controlar si la ventanita flotante está abierta
+  const [abierto, setAbierto] = useState(autoOpen);
+
   return (
-    <div className="suscripcion-card" style={{ marginTop: '2rem', padding: '2rem', background: 'white', borderRadius: '12px', boxShadow: 'var(--card-shadow)' }}>
-      <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}>
-        <i className="fa-brands fa-whatsapp" style={{ color: '#25D366' }}></i> Recibe avisos por WhatsApp
-      </h3>
-      
-      {error && <p className="error" style={{ marginBottom: '1rem', color: 'red' }}>{error}</p>}
-      
-      {paso === 0 && (
-        <form onSubmit={handleSubmitTelefono}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '400px' }}>
-            <input
-              type="tel"
-              placeholder="Número de celular (10 dígitos)"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
-            />
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ marginTop: '4px' }} />
-              <span>Acepto el aviso de privacidad: guardamos tu número y el lugar que sigues solo para avisarte de documentos nuevos; no lo compartimos; te das de baja respondiendo BAJA.</span>
-            </label>
-            <button type="submit" disabled={cargando} className="cta-btn" style={{ padding: '10px' }}>
-              {cargando ? 'Enviando...' : 'Enviarme el código'}
+    <div className="whatsapp-container">
+      {abierto && (
+        <div className="whatsapp-window">
+          <div className="whatsapp-header">
+            <span>
+              <i className="fa-brands fa-whatsapp" style={{ marginRight: '8px' }}></i>
+              Recibe avisos por WhatsApp
+            </span>
+            <button onClick={() => setAbierto(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem' }}>
+              <i className="fa-solid fa-xmark"></i>
             </button>
           </div>
-        </form>
-      )}
+          
+          <div className="whatsapp-content">
+            {error && <p className="error" style={{ marginBottom: '1rem', color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+            
+            {paso === 0 && (
+              <form onSubmit={handleSubmitTelefono}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: 0, marginBottom: '0.5rem' }}>
+                    Entérate cuando {nombre} publique nuevos informes.
+                  </p>
+                  <input
+                    type="tel"
+                    placeholder="Número (10 dígitos)"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+                  />
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ marginTop: '3px' }} />
+                    <span>Acepto el aviso de privacidad para enviarme avisos de nuevos documentos.</span>
+                  </label>
+                  <button type="submit" disabled={cargando} className="cta-btn" style={{ padding: '10px', fontSize: '0.9rem', background: '#25D366', boxShadow: 'none' }}>
+                    {cargando ? 'Enviando...' : 'Recibir informes'}
+                  </button>
+                </div>
+              </form>
+            )}
 
-      {paso === 1 && (
-        <form onSubmit={handleSubmitCodigo}>
-          <p style={{ marginBottom: '1rem' }}>Hemos enviado un código por WhatsApp al {telefono}.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '400px' }}>
-            <input
-              type="text"
-              placeholder="Código de 6 dígitos"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc', letterSpacing: '2px', textAlign: 'center', fontSize: '1.2rem' }}
-            />
-            <button type="submit" disabled={cargando} className="cta-btn" style={{ padding: '10px' }}>
-              {cargando ? 'Verificando...' : 'Confirmar'}
-            </button>
+            {paso === 1 && (
+              <form onSubmit={handleSubmitCodigo}>
+                <p style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>Enviamos un código al {telefono}.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Código de 6 dígitos"
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc', letterSpacing: '2px', textAlign: 'center', fontSize: '1.2rem' }}
+                  />
+                  <button type="submit" disabled={cargando} className="cta-btn" style={{ padding: '10px', fontSize: '0.9rem', background: '#25D366', boxShadow: 'none' }}>
+                    {cargando ? 'Verificando...' : 'Confirmar'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {paso === 2 && (
+              <div style={{ padding: '1rem', background: '#dcf8c6', borderRadius: '8px', color: '#075e54', fontSize: '0.9rem' }}>
+                <strong>¡Listo!</strong> Te avisaremos por WhatsApp cuando {lugarNombre} publique documentos nuevos.
+              </div>
+            )}
+
+            {paso === 3 && (
+              <div style={{ padding: '1rem', background: '#e2f0fb', borderRadius: '8px', color: '#005c9e', fontSize: '0.9rem' }}>
+                Ya recibes avisos de {lugarNombre}.
+              </div>
+            )}
           </div>
-        </form>
-      )}
-
-      {paso === 2 && (
-        <div style={{ padding: '1rem', background: '#dcf8c6', borderRadius: '8px', color: '#075e54' }}>
-          <strong>Listo:</strong> te avisaremos por WhatsApp cuando el gobierno de {lugarNombre} publique documentos nuevos. Para dejar de recibirlos, responde BAJA.
         </div>
       )}
-
-      {paso === 3 && (
-        <div style={{ padding: '1rem', background: '#e2f0fb', borderRadius: '8px', color: '#005c9e' }}>
-          Ya recibes avisos de {lugarNombre}.
-        </div>
+      
+      {!abierto && (
+        <button className="whatsapp-toggle" onClick={() => setAbierto(true)} onMouseEnter={() => setAbierto(true)} aria-label="Recibir avisos por WhatsApp">
+          <i className="fa-brands fa-whatsapp"></i>
+        </button>
       )}
     </div>
   );

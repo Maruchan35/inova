@@ -122,6 +122,9 @@
   nuevos, 180 cambios de sección, año y una descripción de 1-2 frases). **Resúmenes con IA**
   (`python resumir.py`): van 232; faltan ~1,450 (~$3 USD fuera de hora pico, lee hasta 120 mil caracteres por
   documento; sigue donde se quedó y se detiene solo si se acaba el saldo).
+- **Versión final v2.2.0** (rama `backend/version-final-v2.2.0`): la v2.2.0 de Marko y Alisson (mapa interactivo,
+  WhatsApp flotante, visor nuevo, etiqueta de versión) unida con el cerebro v3. Único conflicto: el final de
+  `frontend/src/App.css`, donde se conservaron los estilos de ambos. `GET /api/estados` trae `latitud`/`longitud`.
 - Siguiente: terminar los resúmenes cuando haya saldo y publicar la base nueva en Releases (sin datos
   personales); leer Word y Excel; extraer contratos a `proveedores`/`contratos`; OCR de los escaneados.
 - Resuelto de datos (Marko): claves INEGI corregidas en Guanajuato (San Miguel 11003 y 34..46 ajustadas), Oaxaca (desambiguados San Juan y San Pedro Mixtepec con distritos) y Chiapas (Honduras de la Sierra 07125 sin duplicados). Catálogo de 2,475 municipios 100% verificado.
