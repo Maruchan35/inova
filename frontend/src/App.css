@@ -1536,7 +1536,7 @@ footer {
 
 /* Modo por voz: micrófono flotante, panel de "te escucho" y micrófonos del buscador y del chat */
 .voz-toggle {
-  position: fixed; bottom: 166px; right: 32px; z-index: 9998;
+  position: fixed; bottom: 166px; right: 32px; z-index: 9997;
   width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
   background: var(--accent-color); color: white; font-size: 1.25rem;
   box-shadow: 0 8px 25px rgba(0,0,0,0.2); transition: transform .15s, background .2s;
@@ -1582,4 +1582,85 @@ footer {
   .voz-panel { flex-wrap: wrap; }
   .voz-botones { flex-direction: row; width: 100%; }
   .voz-botones button { flex: 1; }
+}
+
+/* ===== Celulares y tabletas: la página se adapta a cualquier pantalla ===== */
+@media (max-width: 768px) {
+  header { padding: .7rem 4%; flex-wrap: wrap; gap: .4rem .8rem; }
+  .logo { font-size: 1.2rem; }
+  nav { width: 100%; }
+  nav ul { gap: .3rem 1rem; flex-wrap: wrap; justify-content: space-between; }
+  nav .btn-link { font-size: .82rem; padding: 4px 0; white-space: nowrap; }
+  nav .btn-link i { margin-right: 4px !important; }
+
+  .hero { padding: 2.2rem 5% 1.5rem; }
+  .hero h1 { font-size: 2rem; line-height: 1.15; margin-bottom: 1rem; }
+  .hero p { font-size: .95rem; margin-bottom: 1.1rem !important; }
+  .search-bar { padding: 6px 8px; }
+  .search-bar input { min-width: 0; font-size: 16px; }
+  .search-btn { padding: 10px 14px !important; font-size: .85rem; }
+  .search-mic { width: 38px; height: 38px; margin-right: 6px; }
+  .search-results { max-height: 55vh; }
+  .mapa-home-header h3 { font-size: 1.15rem; }
+  .cf-card { width: min(300px, 78vw); padding: 1.3rem; margin: 0 .5rem; }
+
+  .lugar-container { padding: 1.4rem 4%; }
+  .lugar-header h2 { font-size: 1.5rem; }
+  .map-wrapper { height: 260px; }
+  .ranking-section { padding: 1.2rem; }
+  .rank-number { font-size: 1.4rem; }
+
+  .doc-container { padding: 1rem 4% 6rem; }
+  .doc-main-title { font-size: 1.45rem !important; line-height: 1.25; }
+  .doc-section-card { padding: 1.1rem; margin-bottom: 1.2rem; }
+  .doc-punto-card { padding: 1rem; }
+  .doc-fuente-actions > * { flex: 1 1 100%; justify-content: center; }
+  .doc-ficha-grid { grid-template-columns: 1fr 1fr; }
+  .doc-metrics-grid { grid-template-columns: 1fr; }
+  .doc-procesando-card, .doc-loading-container, .doc-error-container { padding: 1.5rem 1rem; }
+
+  /* Visor de páginas: ocupa toda la pantalla y las tablas anchas se deslizan */
+  .pagina-modal { padding: 0; align-items: stretch; }
+  .pagina-content { max-width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; border: none; }
+  .pagina-header { padding: .8rem 1rem; gap: .6rem; flex-direction: column; align-items: stretch; }
+  .pagina-header-left { min-width: 0; width: 100%; flex: none; }
+  .pagina-title { font-size: 1rem !important; line-height: 1.3; }
+  .pagina-header-controls { width: 100%; justify-content: space-between; }
+  .pagina-body { padding: 1rem; }
+  .pagina-acciones { padding: .8rem 1rem; gap: .6rem; }
+  .pagina-table-wrapper { -webkit-overflow-scrolling: touch; }
+  .pagina-acciones > * { flex: 1 1 auto; justify-content: center; }
+
+  /* Botones flotantes más chicos y pegados a la orilla */
+  .chatbot-container { bottom: 14px; right: 14px; }
+  .chat-toggle { width: 50px; height: 50px; font-size: 1.2rem; }
+  .whatsapp-container { bottom: 72px; right: 16px; }
+  .whatsapp-toggle { width: 46px; height: 46px; }
+  .whatsapp-window { width: min(320px, calc(100vw - 32px)); }
+  .voz-toggle { bottom: 126px; right: 16px; width: 46px; height: 46px; font-size: 1.05rem; }
+  .voz-panel { bottom: 12px; padding: 14px; gap: 12px; }
+
+  /* El chat ocupa casi toda la pantalla (sin ajustar tamaño: no hace falta) */
+  .chat-window {
+    position: fixed; top: 8px; left: 8px; right: 8px; bottom: 76px;
+    width: auto !important; height: auto !important; max-width: none; max-height: none;
+  }
+  .chat-ajustar, .chat-header-botones .fa-expand, .chat-header-botones .fa-compress { display: none; }
+  .chat-input input { min-width: 0; font-size: 16px; }
+  .msg-bubble { max-width: 92%; }
+
+  footer { padding: 1.5rem 1rem 5.5rem; font-size: .8rem; margin-top: 2rem; }
+}
+
+@media (max-width: 600px) {
+  .docs-carousel-container { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .hero h1 { font-size: 1.7rem; }
+  nav .btn-link { font-size: .78rem; }
+}
+
+@media (max-width: 340px) {
+  .doc-ficha-grid { grid-template-columns: 1fr; }
 }
