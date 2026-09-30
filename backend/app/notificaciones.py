@@ -90,9 +90,16 @@ def limpiar_limites() -> None:
 # --- Suscribirse, verificar y darse de baja ---
 
 
-def suscribir(con: sqlite3.Connection, telefono: str, estado_id: int, municipio_id: int | None) -> dict:
+def suscribir(con: sqlite3.Connection, telefono: str, estado_id: int | None, municipio_id: int | None) -> dict:
     asegurar_tablas(con)
     telefono = normalizar_telefono(telefono)
+    if municipio_id and not estado_id:  # el municipio ya dice de qué estado es
+        fila = con.execute("SELECT estado_id FROM municipios WHERE id = ?", (municipio_id,)).fetchone()
+        if fila is None:
+            raise ErrorAviso("El municipio no existe.")
+        estado_id = fila["estado_id"]
+    if not estado_id:
+        raise ErrorAviso("Elige un estado o un municipio.")
     lugar = _nombre_lugar(con, estado_id, municipio_id)
     existente = con.execute(
         "SELECT id, verificada, activa FROM suscripciones WHERE telefono = ? AND estado_id = ? AND IFNULL(municipio_id, 0) = ?",
