@@ -6,9 +6,16 @@ import sqlite3
 Con = sqlite3.Connection
 
 
-def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None):
-    """Condiciones WHERE opcionales sobre documentos (d) y secciones (s)."""
+def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None, municipio_y_su_estado=None):
+    """Condiciones WHERE opcionales sobre documentos (d) y secciones (s).
+
+    `municipio_y_su_estado`: los documentos del municipio y los estatales de su estado (el chatbot pregunta así:
+    un informe estatal trae datos de cada municipio)."""
     condiciones, params = [], []
+    if municipio_y_su_estado is not None:
+        condiciones.append("(d.municipio_id = ? OR (d.municipio_id IS NULL AND "
+                           "d.estado_id = (SELECT estado_id FROM municipios WHERE id = ?)))")
+        params += [municipio_y_su_estado, municipio_y_su_estado]
     for valor, sql in (
         (estado_id, "d.estado_id = ?"),
         (municipio_id, "d.municipio_id = ?"),
@@ -22,9 +29,21 @@ def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=No
 
 
 def consulta_fts(texto: str) -> str:
-    # Palabras de 3+ letras, entre comillas para que FTS5 no las interprete como operadores.
-    palabras = [p for p in re.findall(r"\w+", texto, flags=re.UNICODE) if len(p) >= 3]
-    return " OR ".join(f'"{p}"' for p in palabras)
+    """Palabras de 3+ letras, entre comillas para que FTS5 no las interprete como operadores.
+
+    Las de 5+ letras se buscan sin plural y como prefijo, para que el singular encuentre el plural y al revés:
+    "becas" → "beca"* (beca, becas, becarios), "municipales" → "municipal"*."""
+    terminos = []
+    for p in re.findall(r"\w+", texto, flags=re.UNICODE):
+        if len(p) < 3:
+            continue
+        if len(p) < 5:
+            terminos.append(f'"{p}"')
+            continue
+        minus = p.lower()
+        raiz = p[:-2] if len(p) >= 6 and minus.endswith("es") else p[:-1] if minus.endswith("s") else p
+        terminos.append(f'"{raiz}"*')
+    return " OR ".join(terminos)
 
 
 def buscar_fragmentos(con: Con, texto: str, limite: int = 10, **filtros) -> list[dict]:

@@ -82,6 +82,7 @@ def responder(con: sqlite3.Connection, pregunta: str, **filtros) -> dict:
         "modo": registro["modo"],
         "segundos": registro["segundos"],
         "costo_usd": registro["costo_usd"],
+        "alcance": registro.get("alcance", "lugar"),
         "motivo": ("La IA no está disponible en este momento; se muestran los fragmentos encontrados."
                    if registro["origen"] == "respaldo sin IA" else None),
     }
@@ -97,7 +98,7 @@ def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
             return {"pregunta": pregunta, "respuesta": "Escribe una pregunta.", "citas": []}
         if not llm.configurado():
             registro["origen"], registro["aviso"] = "respaldo sin IA", "No hay DEEPSEEK_API_KEY en backend/.env"
-            return _sin_ia(con, pregunta, filtros)
+            return _sin_ia(con, pregunta, filtros, registro)
 
         documento = _documento_completo(con, filtros.get("documento_id"))
         registro["modo"] = "documento completo" if documento else "páginas relevantes"
@@ -111,11 +112,11 @@ def _responder(con: sqlite3.Connection, registro: dict, **filtros) -> dict:
                 if documento:
                     resultado = _con_documento(con, pregunta, *documento, registro["uso"])
                 else:
-                    resultado = _con_paginas_relevantes(con, pregunta, filtros, registro["uso"])
+                    resultado = _con_paginas_relevantes(con, pregunta, filtros, registro["uso"], registro)
             except Exception as e:  # la IA falló: respaldo sin IA, y no se guarda para reintentar después
                 registro["origen"] = "respaldo sin IA"
                 registro["aviso"] = f"La IA falló ({type(e).__name__}: {e})"
-                return _sin_ia(con, pregunta, filtros)
+                return _sin_ia(con, pregunta, filtros, registro)
             registro["origen"] = "DeepSeek" if registro["uso"] else "búsqueda sin resultados"
             _guardar(clave, resultado)
             return {"pregunta": pregunta, **resultado}
@@ -150,8 +151,9 @@ def _guardar(clave: str, resultado: dict) -> None:
 
 
 def _huella(con: sqlite3.Connection, filtros: dict) -> list:
-    """Cambia cuando se agrega o procesa un documento en ese lugar: así nunca se sirve una respuesta vieja."""
-    where, params = filtros_sql(**filtros)
+    """Cambia cuando se agrega o procesa un documento en ese lugar (o en cualquiera, por la búsqueda ampliada):
+    así nunca se sirve una respuesta vieja."""
+    where, params = filtros_sql(**_alcance(filtros))
     fila = con.execute(
         f"""
         SELECT COUNT(*), MAX(d.id), SUM(d.total_paginas)
@@ -160,7 +162,8 @@ def _huella(con: sqlite3.Connection, filtros: dict) -> list:
         """,
         params,
     ).fetchone()
-    return list(fila)
+    total = con.execute("SELECT COUNT(*), MAX(id) FROM documentos WHERE estatus = 'listo'").fetchone()
+    return list(fila) + list(total)
 
 
 # --- Los dos modos de preguntar ---
@@ -189,15 +192,43 @@ def _con_documento(con, pregunta: str, documento_id: int, titulo: str, paginas: 
     return _resultado(con, pregunta, llm.pedir_json(SISTEMA, usuario, uso), permitidas)
 
 
-def _con_paginas_relevantes(con, pregunta: str, filtros: dict, uso: dict) -> dict:
-    encontradas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES, **filtros)
+def _alcance(filtros: dict) -> dict:
+    """En un municipio, el chatbot busca en sus documentos y en los estatales de su estado."""
+    alcance = {k: v for k, v in filtros.items() if v is not None}
+    if alcance.get("municipio_id") and not alcance.get("documento_id"):
+        alcance["municipio_y_su_estado"] = alcance.pop("municipio_id")
+    return alcance
+
+
+def paginas_relevantes(con, pregunta: str, filtros: dict, registro: dict | None = None) -> list[dict]:
+    """Las páginas que se le mandan a la IA (o que se muestran sin IA), con su texto.
+
+    Primero en el lugar (municipio + estatales de su estado), y primero las que nombran al municipio.
+    Si en el lugar no hay nada, busca en todo el catálogo y lo anota en `registro["alcance"] = "todo"`."""
+    alcance = _alcance(filtros)
+    candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4, **alcance)
+    if not candidatas and alcance:
+        candidatas = buscar_fragmentos(con, pregunta, limite=PAGINAS_RELEVANTES * 4)
+        if candidatas and registro is not None:
+            registro["alcance"] = "todo"
+    for c in candidatas:
+        c["texto"] = con.execute(
+            "SELECT texto FROM paginas WHERE documento_id = ? AND numero = ?", (c["documento_id"], c["pagina"])
+        ).fetchone()["texto"]
+    municipio_id = alcance.get("municipio_y_su_estado")
+    if municipio_id:
+        nombre = normalizar(con.execute("SELECT nombre FROM municipios WHERE id = ?", (municipio_id,)).fetchone()["nombre"])
+        candidatas.sort(key=lambda c: nombre not in normalizar(c["texto"]))  # estable: respeta la relevancia
+    return candidatas[:PAGINAS_RELEVANTES]
+
+
+def _con_paginas_relevantes(con, pregunta: str, filtros: dict, uso: dict, registro: dict) -> dict:
+    encontradas = paginas_relevantes(con, pregunta, filtros, registro)
     if not encontradas:  # nada que mandarle a la IA: se ahorra la llamada
         return {"respuesta": NO_ENCONTRE, "citas": []}
     fuentes, permitidas = [], {}
     for n, c in enumerate(encontradas, start=1):
-        texto = con.execute(
-            "SELECT texto FROM paginas WHERE documento_id = ? AND numero = ?", (c["documento_id"], c["pagina"])
-        ).fetchone()["texto"]
+        texto = c["texto"]
         fuentes.append(f"[Fuente {n}] {c['documento_titulo']} ({c['lugar']}), página {c['pagina']}:\n"
                        f"{texto.strip()[:MAX_CARACTERES_PAGINA]}\n")
         permitidas[n] = (c["documento_id"], c["pagina"])
@@ -252,7 +283,9 @@ def _cita(con, documento_id: int, pagina: int, consulta: str) -> dict:
     return {**{k: fila[k] for k in ("documento_id", "documento_titulo", "seccion", "lugar", "pagina")}, "fragmento": fragmento}
 
 
-def _sin_ia(con, pregunta: str, filtros: dict) -> dict:
-    citas = buscar_fragmentos(con, pregunta, limite=MAX_CITAS, **filtros)
+def _sin_ia(con, pregunta: str, filtros: dict, registro: dict | None = None) -> dict:
+    consulta = consulta_fts(pregunta)
+    citas = [_cita(con, c["documento_id"], c["pagina"], consulta)
+             for c in paginas_relevantes(con, pregunta, filtros, registro)[:MAX_CITAS]]
     respuesta = f"Encontré {len(citas)} fragmento(s) relevante(s) en los documentos." if citas else NO_ENCONTRE
     return {"pregunta": pregunta, "respuesta": respuesta, "citas": citas}
