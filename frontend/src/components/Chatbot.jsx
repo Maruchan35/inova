@@ -15,6 +15,18 @@ function describirOrigen(detalle) {
   }
 }
 
+// Las últimas preguntas con su respuesta (desde el último cambio de página), para entender "¿y en León?".
+function historialDe(mensajes) {
+  const desde = mensajes.map(m => m.tipo).lastIndexOf('aviso') + 1;
+  const pares = [];
+  for (let i = desde; i < mensajes.length - 1; i++) {
+    if (mensajes[i].tipo === 'user' && mensajes[i + 1].resultado) {
+      pares.push({ pregunta: mensajes[i].texto, respuesta: mensajes[i + 1].resultado.respuesta });
+    }
+  }
+  return pares.slice(-3);
+}
+
 export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoPorDefecto, onCerrar }) {
   const [open, setOpen] = useState(false);
   const [pregunta, setPregunta] = useState('');
@@ -23,6 +35,7 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
     texto: '¡Hola! Pregúntame por los documentos oficiales de cualquier estado o municipio: un informe, un presupuesto, una obra o un contrato. Cada dato te lo doy con la página de donde sale.'
   }]);
   const [cargando, setCargando] = useState(false);
+  const [sugeridas, setSugeridas] = useState([]);
   const bodyRef = useRef(null);
   const contextoAnterior = useRef(contexto);
 
@@ -34,6 +47,17 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
     }
   }, [contexto]);
 
+  // Preguntas de ejemplo según la página (las da el backend).
+  const filtrosClave = JSON.stringify(filtros || {});
+  useEffect(() => {
+    if (!open) return;
+    let vigente = true;
+    api.sugeridas(filtros || {})
+      .then(s => { if (vigente) setSugeridas(s); })
+      .catch(() => { if (vigente) setSugeridas([]); });
+    return () => { vigente = false; };
+  }, [open, filtrosClave]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (abiertoPorDefecto) {
       setOpen(true);
@@ -44,15 +68,16 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [mensajes, cargando]);
 
-  async function enviar() {
-    if (!pregunta.trim()) return;
-    const txt = pregunta.trim();
+  async function enviar(elegida) {
+    const txt = (typeof elegida === 'string' ? elegida : pregunta).trim();
+    if (!txt || cargando) return;
+    const historial = historialDe(mensajes);
     setPregunta('');
     setMensajes(prev => [...prev, { tipo: 'user', texto: txt }]);
     setCargando(true);
 
     try {
-      const res = await api.preguntar(txt, filtros);
+      const res = await api.preguntar(txt, filtros, historial);
       setMensajes(prev => [...prev, { tipo: 'bot', resultado: res }]);
     } catch (err) {
       setMensajes(prev => [...prev, { tipo: 'bot', error: 'Hubo un error al buscar en los documentos: ' + err.message }]);
@@ -102,9 +127,15 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
                         ))}
                       </div>
                     )}
+                    {m.resultado.detalle?.cifras_sin_verificar?.length > 0 && (
+                      <p className="chat-verificar">
+                        <i className="fa-solid fa-triangle-exclamation"></i> No encontré estas cifras tal cual en las páginas: {m.resultado.detalle.cifras_sin_verificar.join(', ')}. Revísalas en el documento.
+                      </p>
+                    )}
                     {m.resultado.detalle?.entendido && (m.resultado.detalle.entendido.lugar || m.resultado.detalle.entendido.seccion) && (
                       <p className="chat-entendido">
-                        Entendí: {[m.resultado.detalle.entendido.lugar, m.resultado.detalle.entendido.seccion].filter(Boolean).join(' · ')}
+                        {m.resultado.detalle.entendido.tipo === 'comparacion' ? 'Comparé: ' : 'Entendí: '}
+                        {[m.resultado.detalle.entendido.lugar, m.resultado.detalle.entendido.seccion].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     {describirOrigen(m.resultado.detalle) && (
@@ -114,6 +145,11 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
                 )}
               </div>
             ))}
+            {!cargando && sugeridas.length > 0 && (mensajes.length === 1 || mensajes[mensajes.length - 1].tipo === 'aviso') && (
+              <div className="chat-sugeridas">
+                {sugeridas.map(s => <button key={s} onClick={() => enviar(s)}>{s}</button>)}
+              </div>
+            )}
             {cargando && <span className="typing-indicator">Buscando en los documentos...</span>}
           </div>
           <div className="chat-input">

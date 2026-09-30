@@ -2,6 +2,7 @@
 
     "háblame del informe de gobierno de cdmx" → Ciudad de México · informes · panorama
     "¿cuánto costó el mercado de Irapuato?"   → Irapuato (Guanajuato) · — · dato
+    "compara la deuda de Jalisco y Nuevo León" → Jalisco y Nuevo León · presupuesto · comparación
 """
 
 import re
@@ -92,24 +93,35 @@ def _patron(nombres: dict) -> re.Pattern:
 
 
 def entender(con: sqlite3.Connection, pregunta: str) -> dict:
-    """{"estado_id", "municipio_id", "lugar", "seccion", "panorama", "palabras_lugar"} de la pregunta."""
+    """{"estado_id", "municipio_id", "lugar", "seccion", "panorama", "palabras_lugar", "lugares", "comparacion"}.
+
+    "lugares": todos los que nombra la pregunta, en orden; el primero también queda en estado_id/municipio_id/lugar.
+    Con dos o más, "comparacion" es verdadero."""
     cat = _cargar_catalogo(con)
     texto = normalizar(pregunta)
     resultado = {"estado_id": None, "municipio_id": None, "lugar": None, "seccion": None, "panorama": False,
-                 "palabras_lugar": set()}
+                 "palabras_lugar": set(), "lugares": [], "comparacion": False}
 
-    resto = texto
-    if m := cat["patron_estados"].search(texto):
+    lugares, resto = [], texto
+    for m in cat["patron_estados"].finditer(texto):
         estado_id, nombre = cat["estados"][m.group(1)]
-        resultado.update(estado_id=estado_id, lugar=nombre)
+        if not any(l["estado_id"] == estado_id for l in lugares):
+            lugares.append({"estado_id": estado_id, "municipio_id": None, "lugar": nombre})
         resultado["palabras_lugar"] |= set(m.group(1).split()) | set(normalizar(nombre).split())
-        resto = texto.replace(m.group(1), " ")
-    if m := cat["patron_municipios"].search(resto):
+        resto = resto.replace(m.group(1), " ")
+    for m in cat["patron_municipios"].finditer(resto):
         municipio_id, estado_id, nombre = cat["municipios"][m.group(1)]
-        if resultado["estado_id"] in (None, estado_id):  # "León, Guanajuato" sí; "León" dicho junto a otro estado, no
-            resultado.update(municipio_id=municipio_id, estado_id=estado_id,
-                             lugar=f"{nombre}, {cat['nombre_estado'][estado_id]}")
-            resultado["palabras_lugar"] |= set(m.group(1).split())
+        lugar = {"estado_id": estado_id, "municipio_id": municipio_id,
+                 "lugar": f"{nombre}, {cat['nombre_estado'][estado_id]}"}
+        su_estado = next((i for i, l in enumerate(lugares) if l["estado_id"] == estado_id and not l["municipio_id"]), None)
+        if su_estado is not None:  # "León, Guanajuato": el municipio precisa al estado, es un solo lugar
+            lugares[su_estado] = lugar
+        elif not any(l["municipio_id"] == municipio_id for l in lugares):
+            lugares.append(lugar)
+        resultado["palabras_lugar"] |= set(m.group(1).split())
+    if lugares:
+        resultado.update({k: lugares[0][k] for k in ("estado_id", "municipio_id", "lugar")},
+                         lugares=lugares, comparacion=len(lugares) >= 2)
 
     posiciones = [(m.start(), clave) for clave, patron in SECCIONES if (m := re.search(patron, texto))]
     if posiciones:

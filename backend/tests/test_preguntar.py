@@ -247,3 +247,128 @@ def test_el_lugar_que_dice_la_pregunta_gana_a_la_pagina(cliente, ia):
 def test_sin_ia_tambien_devuelve_documentos(cliente):
     r = preguntar(cliente, "¿Qué dice el presupuesto de egresos de Irapuato?")
     assert r["documentos"][0]["id"] == 2 and r["detalle"]["entendido"]["tipo"] == "panorama"
+
+
+# --- Cerebro v3: verificador de cifras, memoria, comparaciones, caché más listo, tope de gasto, sugeridas ---
+
+
+def test_verificador_de_cifras_cita_la_pagina_que_falto_y_avisa_lo_que_no_esta(cliente, ia):
+    # La IA solo citó la página 1, pero los $704 millones salen de la página 3; los $999,000 no están en ninguna.
+    ia.respuesta = {"encontrado": True, "fuentes": [1],
+                    "respuesta": "El total es $3,200,000,000.00; a obra pública van $704 millones y a deporte $999,000."}
+    r = preguntar(cliente, "¿Cuánto es el presupuesto?", documento_id=2)
+    assert [(c["documento_id"], c["pagina"]) for c in r["citas"]] == [(2, 1), (2, 3)]
+    assert r["detalle"]["cifras_sin_verificar"] == ["999,000"]
+
+
+def test_cifras_redondeadas_o_en_millones_cuentan_como_verificadas():
+    from app.preguntas import cifras
+
+    def valores(texto):
+        return [round(v) for v, *_ in cifras(texto)]
+
+    pagina = "Monto total: $3,200,000,000.00 pesos. Seguridad 28%. Se asignan $5,347,783.25 en 2025 (página 123)."
+    assert valores(pagina) == [3_200_000_000, 28, 5_347_783]  # sin el año ni "página 123"
+    for dicho, esperado in (("3,200 millones", 3_200_000_000), ("$3.2 mil millones", 3_200_000_000),
+                            ("5.3 millones", 5_300_000), ("28%", 28)):
+        (valor, tolerancia, como, _), = cifras(dicho)
+        assert round(valor) == esperado and como in dicho
+        assert any(abs(v - valor) <= tolerancia for v, *_ in cifras(pagina)), dicho
+    (valor, tolerancia, *_), = cifras("5.4 millones")
+    assert not any(abs(v - valor) <= tolerancia for v, *_ in cifras(pagina))  # 5,347,783 no es 5.4 millones
+
+
+def test_cifras_como_vienen_en_los_pdf():
+    from app.preguntas import _verificar_cifras
+
+    # Pegadas al texto de la tabla, dos cifras separadas por un espacio, con errores de captura y "13, 200".
+    pagina = ("5,947,829Turismo\n29,076,147,169Educación Pública\nTotal 612,800,000 616,742,902 538,832,783\n"
+              "por un monto de hasta $2,500.000,000.00 (Dos mil quinientos millones)\nAcompañamos a más de 13, 200 personas")
+    respuesta = ("Educación recibe 29,076,147,169; el total es 616,742,902; se invitó por $2,500,000,000.00; "
+                 "se acompañó a 13,200 personas y 999,999 no está.")
+    elegidas = [(1, 1)]
+    assert _verificar_cifras(respuesta, {(1, 1): pagina}, "", elegidas) == ["999,999"]
+
+
+def test_memoria_sigue_el_tema_de_la_conversacion(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "Se construyeron 35 escuelas.", "fuentes": [1]}
+    primera = preguntar(cliente, "¿Cuántas escuelas se construyeron en Irapuato?")
+    historial = [{"pregunta": "¿Cuántas escuelas se construyeron en Irapuato?", "respuesta": primera["respuesta"]}]
+    r = cliente.post("/api/preguntar", json={"pregunta": "¿y en Celaya?", "historial": historial}).json()
+    # "¿y en Celaya?" no dice de qué: se busca "escuelas" en Celaya (y en los estatales de Guanajuato)
+    assert [(c["documento_id"], c["pagina"]) for c in r["citas"]] == [(4, 2)]
+    assert r["detalle"]["entendido"]["lugar"] == "Celaya, Guanajuato" and r["detalle"]["alcance"] == "lugar"
+    assert "CONVERSACIÓN ANTERIOR" in ia.llamadas[-1] and ia.llamadas[-1].endswith("PREGUNTA: ¿y en Celaya?")
+    assert "escuelas" in cliente.get("/api/prueba/preguntas").json()[0]["busqueda"]
+
+
+def test_una_pregunta_nueva_y_completa_no_arrastra_la_conversacion(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "El mercado costó $2,300,000.", "fuentes": [1]}
+    historial = [{"pregunta": "Háblame del informe de gobierno de la CDMX", "respuesta": "Es el informe..."}]
+    r = cliente.post("/api/preguntar", json={"pregunta": "¿Cuánto costó el mercado de Irapuato?",
+                                             "historial": historial}).json()
+    assert r["citas"][0]["documento_id"] == 3 and "CONVERSACIÓN ANTERIOR" not in ia.llamadas[-1]
+
+
+def test_compara_lugares_con_fuentes_de_cada_uno(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "Irapuato: 3,200 millones; de Celaya no hay datos.", "fuentes": [1]}
+    r = preguntar(cliente, "Compara el presupuesto de Irapuato y Celaya")
+    enviado = ia.llamadas[-1]
+    assert "LUGARES A COMPARAR: Irapuato, Guanajuato; Celaya, Guanajuato" in enviado
+    assert "No se encontraron páginas sobre esto de: Celaya, Guanajuato" in enviado
+    assert "[Fuente 1] Sobre Irapuato, Guanajuato: Presupuesto de Egresos 2026 (ejemplo) (Irapuato), página 1" in enviado
+    assert "Sobre Celaya" not in enviado  # el informe estatal no nombra a Celaya: no cuenta como dato de Celaya
+    assert r["detalle"]["modo"] == "comparación" and r["citas"][0]["documento_id"] == 2
+    assert r["detalle"]["entendido"]["tipo"] == "comparacion"
+    assert r["detalle"]["entendido"]["lugar"] == "Irapuato, Guanajuato y Celaya, Guanajuato"
+    assert r["detalle"]["cifras_sin_verificar"] == []  # "3,200 millones" = $3,200,000,000.00 de la página 1
+
+
+def test_entiende_varios_lugares(cliente):
+    from app.db import abrir
+    from app.entender import entender
+
+    con = abrir()
+    try:
+        e = entender(con, "compara el gasto en salud de Jalisco y Nuevo León")
+        assert [l["lugar"] for l in e["lugares"]] == ["Jalisco", "Nuevo León"] and e["comparacion"]
+        e = entender(con, "becas en León, Guanajuato")  # el municipio precisa al estado: un solo lugar
+        assert (e["lugar"], e["comparacion"]) == ("León, Guanajuato", False)
+    finally:
+        con.close()
+
+
+def test_la_misma_pregunta_con_otras_palabras_sale_del_cache(cliente, ia):
+    ia.respuesta = {"encontrado": True, "respuesta": "Es el presupuesto de Irapuato.", "fuentes": [1]}
+    preguntar(cliente, "¿Qué dice el presupuesto de egresos de Irapuato?")
+    r = preguntar(cliente, "Háblame sobre el presupuesto de egresos de Irapuato")
+    assert r["detalle"]["origen"] == "cache" and len(ia.llamadas) == 1
+    preguntar(cliente, "¿Qué no dice el presupuesto de egresos de Irapuato?")  # "no" cambia la pregunta
+    assert len(ia.llamadas) == 2
+
+
+def test_tope_diario_de_gasto_en_ia(cliente, ia, monkeypatch):
+    from app import preguntas
+
+    antes = preguntas.gasto_de_hoy()
+    preguntar(cliente, "¿Cuánto recibe seguridad?", documento_id=2)
+    assert preguntas.gasto_de_hoy() > antes  # cada llamada a la IA suma al gasto del día
+    monkeypatch.setenv("DEEPSEEK_TOPE_DIARIO_USD", "0")
+    r = preguntar(cliente, "¿Cuánto recibe salud?", documento_id=2)
+    assert r["detalle"]["origen"] == "sin_ia" and "tope diario" in r["detalle"]["motivo"]
+    assert len(ia.llamadas) == 1
+    assert preguntar(cliente, "¿Cuánto recibe seguridad?", documento_id=2)["detalle"]["origen"] == "cache"
+
+
+def test_preguntas_sugeridas_segun_la_pagina(cliente):
+    del_municipio = cliente.get("/api/preguntas-sugeridas", params={"municipio_id": 1}).json()
+    assert "¿Qué dice el presupuesto de Irapuato?" in del_municipio and len(del_municipio) == 4
+    assert cliente.get("/api/preguntas-sugeridas", params={"documento_id": 2}).json()[0] == "¿De qué trata este documento?"
+    # En la portada, solo estados cuyo gobierno tiene el documento (el de ejemplo no cuenta).
+    assert cliente.get("/api/preguntas-sugeridas").json() == []
+
+
+def test_la_respuesta_no_trae_numeros_de_fuente(cliente, ia):
+    ia.respuesta = {"encontrado": True, "fuentes": [1], "respuesta": "Seguridad recibe 28% (Fuente 1) y salud 12% [Fuentes 1 y 2]."}
+    r = preguntar(cliente, "¿Cuánto reciben seguridad y salud?", documento_id=2)
+    assert r["respuesta"] == "Seguridad recibe 28% y salud 12%."

@@ -34,6 +34,9 @@ Thumbs.db
 # PDFs subidos al backend
 backend/subidos/
 
+# Gasto del día en IA (lo lleva el backend para el tope diario)
+backend/gasto_ia.json
+
 # PDFs oficiales (se comparten por Drive, solo se versiona el CSV con ligas y .gitkeep)
 datos/pdfs/*
 !datos/pdfs/.gitkeep

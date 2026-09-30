@@ -133,4 +133,13 @@ Actualmente el esquema utiliza `pagina INTEGER` en `paginas` y citas. Para docum
   - Se quitaron 5 duplicados exactos; el informe de Guanajuato quedó una sola vez, con su liga oficial.
 - **La base no está en Git** (`cabildo.db`, ~300 MB): se publica en los Releases de GitHub sin datos personales
   (`base-2026-09-30`, 99 MB comprimida) y cada quien la baja con `python datos/descargar_base.py`.
-- Pendiente: OCR de los escaneados, leer Excel, y los resúmenes con IA de todos (~$6–12 USD).
+- **Reclasificación con IA** (`backend/reclasificar.py`, 30 sep): los 1,687 documentos oficiales tienen ahora
+  título claro, año, sección revisada (180 cambiaron) y una descripción de 1-2 frases. Quedaron: presupuesto 488,
+  informes 474, actas 268, contratos 254, obras 209. Avance en `documentos/_catalogo/reclasificados.json`.
+- **Resúmenes con IA** (`backend/resumir.py`): 232 documentos ya tienen "En resumen" y "Lo más importante" con
+  su página; faltan ~1,450 (se acabó el saldo de DeepSeek). Se retoma con `python resumir.py` (~$3 USD fuera de
+  hora pico).
+- Pendiente: terminar los resúmenes, publicar la base nueva en Releases, OCR de los escaneados y leer Excel.
+  Ojo: hay documentos que el recolector dejó como estatales aunque son de un municipio (por ejemplo,
+  presupuestos de municipios de Chihuahua) y algunos en una sección que no es (un protocolo de búsqueda de
+  personas en "obras" de Morelos).

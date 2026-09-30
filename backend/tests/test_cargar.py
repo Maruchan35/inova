@@ -54,7 +54,9 @@ def test_carga_valida_y_reporta_filas_invalidas(entorno, capsys):
     r = cargar.cargar(con, csv, pdfs)
     assert (r["procesados"], r["saltados"], r["fallidos"], r["invalidos"]) == (2, 0, 0, 3)
 
-    leon, estatal = documentos(con)
+    # Se cargan en paralelo: el orden de los id cambia de una corrida a otra, así que se buscan por archivo.
+    por_archivo = {d["archivo"].rsplit("/", 1)[-1]: d for d in documentos(con)}
+    leon, estatal = por_archivo["presupuesto-leon.pdf"], por_archivo["informe-estatal.pdf"]
     assert (leon["municipio_id"], leon["seccion_id"], leon["estatus"], leon["total_paginas"]) == (2, 2, "listo", 3)
     assert (estatal["municipio_id"], estatal["anio"], estatal["estatus"]) == (None, None, "listo")
     assert con.execute("SELECT COUNT(*) FROM puntos_clave WHERE documento_id = ?", (leon["id"],)).fetchone()[0] > 0

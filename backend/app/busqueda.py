@@ -13,7 +13,7 @@ desde hasta hacia segun durante los las del una uno unos unas este esta estos es
 aquel aquella hay fue fueron ser son era eran han has hace hizo tiene tienen tuvo mas muy sus les nos todo toda
 todos todas otro otra otros otras tambien ademas pero porque pues algo alguna alguno algunos algunas mucho
 mucha muchos muchas poco dime dame hablame habla explica explicame quiero quisiera saber informacion info datos
-puedes podrias favor gracias hola oye
+puedes podrias favor gracias hola oye compara comparar comparame comparacion comparativo comparativa versus
 """.split())
 
 
@@ -22,12 +22,15 @@ def _sin_acentos(palabra: str) -> str:
 
 
 def filtros_sql(estado_id=None, municipio_id=None, seccion=None, documento_id=None, municipio_y_su_estado=None,
-                documento_ids=None):
+                documento_ids=None, solo_del_estado=None):
     """Condiciones WHERE opcionales sobre documentos (d) y secciones (s).
 
     `municipio_y_su_estado`: los documentos del municipio y los estatales de su estado (el chatbot pregunta así:
-    un informe estatal trae datos de cada municipio)."""
+    un informe estatal trae datos de cada municipio). `solo_del_estado`: solo los del gobierno del estado."""
     condiciones, params = [], []
+    if solo_del_estado is not None:
+        condiciones.append("(d.municipio_id IS NULL AND d.estado_id = ?)")
+        params.append(solo_del_estado)
     if municipio_y_su_estado is not None:
         condiciones.append("(d.municipio_id = ? OR (d.municipio_id IS NULL AND "
                            "d.estado_id = (SELECT estado_id FROM municipios WHERE id = ?)))")

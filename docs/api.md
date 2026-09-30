@@ -99,8 +99,28 @@ La respuesta la genera DeepSeek a partir de los documentos (con caché). Además
 `{ "origen": "ia" | "cache" | "sin_ia" | "sin_resultados", "segundos": 1.8, "costo_usd": 0.0008, "motivo": null }`
 para mostrar de dónde salió cada respuesta (`motivo` explica cuando no se pudo usar la IA).
 `detalle.entendido` dice qué entendió de la pregunta: `{ "lugar": "Ciudad de México", "seccion": "Informes de gobierno",
-"tipo": "panorama" | "dato" }` (el lugar o la sección que dice la pregunta ganan sobre los filtros). Y `documentos`
+"tipo": "panorama" | "dato" | "comparacion" }` (el lugar o la sección que dice la pregunta ganan sobre los filtros). Y `documentos`
 trae hasta 5 documentos relacionados: `[{ "id": 311, "titulo": "…", "anio": 2025, "lugar": "Ciudad de México", "seccion": "informes" }]`.
+
+Campos opcionales que se agregaron (lo anterior sigue funcionando igual):
+- **`historial`** (en lo que se envía): la conversación hasta ahora, de la más vieja a la última,
+  `[{ "pregunta": "¿Cuánto se invirtió en becas en Irapuato?", "respuesta": "..." }]` (bastan las 3 últimas).
+  Con él, "¿y en León?" o "¿y en 2024?" siguen el tema de la pregunta anterior. Una pregunta que nombra su
+  propio lugar y su propio tema se toma como nueva.
+- **Comparar lugares**: "compara el presupuesto de Jalisco y Nuevo León" devuelve `tipo: "comparacion"` y
+  `lugar: "Jalisco y Nuevo León"`. Para un estado solo usa documentos del gobierno del estado; si de un lugar
+  no hay datos, la respuesta lo dice.
+- **`detalle.cifras_sin_verificar`**: cifras de la respuesta que no se encontraron en las páginas que
+  consultó la IA (casi siempre `[]`). Si trae algo, hay que avisarle a la persona que las revise en el documento.
+- **`detalle.motivo`** también avisa cuando se alcanzó el tope diario de gasto en IA
+  (`DEEPSEEK_TOPE_DIARIO_USD`, 3 dólares por defecto): ese día el chatbot sigue respondiendo con los fragmentos.
+
+#### `GET /api/preguntas-sugeridas`
+Preguntas de ejemplo para el chatbot según la página: `?estado_id=`, `?municipio_id=` o `?documento_id=`
+(sin parámetros, las de la portada). Devuelve una lista de textos, solo de secciones que tienen documentos:
+```json
+["Háblame del informe de gobierno de Durango", "¿Qué dice el presupuesto del Estado de México?"]
+```
 
 ### Avisos por WhatsApp
 
