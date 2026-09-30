@@ -209,7 +209,7 @@ export default function App() {
         <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <LogoIcono size={18} />
           <span>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</span>
-          <span className="version-badge">v4.0.0</span>
+          <span className="version-badge">v5.0.0</span>
         </p>
       </footer>
     </>
