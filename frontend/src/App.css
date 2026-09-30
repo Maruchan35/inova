@@ -642,48 +642,115 @@ nav ul {
   margin-bottom: 2rem;
 }
 
+.doc-section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
 .doc-section-title {
   font-size: 1.25rem;
   color: var(--primary-color);
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f1f5f9;
+  margin: 0;
+  font-weight: 700;
+}
+
+.doc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #a7f3d0;
+}
+
+/* Ficha técnica del documento */
+.doc-ficha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.doc-ficha-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-ficha-label {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc-ficha-val {
+  font-size: 0.95rem;
+  color: var(--primary-color);
   font-weight: 600;
 }
 
 .doc-resumen-body {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   line-height: 1.75;
   color: #334155;
-  white-space: pre-wrap;
+  background: #ffffff;
 }
 
-.doc-puntos-list {
-  list-style: none;
+.doc-resumen-desc {
+  line-height: 1.7;
+  color: #334155;
+}
+
+/* Puntos clave y desglose financiero */
+.doc-puntos-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.doc-punto-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
+.doc-punto-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1.2rem 1.4rem;
-  transition: border-color 0.2s;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  transition: all 0.2s ease;
 }
 
-.doc-punto-item:hover {
+.doc-punto-card:hover {
   border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.doc-punto-bullet {
+.doc-punto-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-punto-badge-num {
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -695,17 +762,15 @@ nav ul {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.doc-punto-content {
+.doc-punto-tipo {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
   flex: 1;
-}
-
-.doc-punto-text {
-  font-size: 0.98rem;
-  line-height: 1.6;
-  color: #1e293b;
 }
 
 .btn-punto-pag {
@@ -715,12 +780,11 @@ nav ul {
   background: white;
   color: var(--accent-color);
   border: 1px solid #cbd5e1;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  flex-shrink: 0;
   transition: all 0.2s;
 }
 
@@ -728,6 +792,151 @@ nav ul {
   background: var(--accent-color);
   color: white;
   border-color: var(--accent-color);
+}
+
+/* Tarjetas de métricas financieras extraídas */
+.doc-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.doc-metric-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.doc-metric-concept {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.doc-metric-values {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.doc-metric-tag {
+  font-size: 0.82rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.num-pos {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.num-neg {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.badge-up {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-down {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.badge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.doc-punto-text {
+  font-size: 0.96rem;
+  line-height: 1.65;
+  color: #334155;
+}
+
+.doc-procesando-card, .doc-loading-container, .doc-error-container {
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #e2e8f0;
+}
+
+/* WhatsApp Floating Widget */
+.whatsapp-container {
+  position: fixed;
+  bottom: 102px;
+  right: 32px;
+  z-index: 9998;
+}
+
+.whatsapp-toggle {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.whatsapp-toggle:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 10px 25px rgba(37, 211, 102, 0.55);
+}
+
+.whatsapp-window {
+  position: absolute;
+  bottom: 68px;
+  right: 0;
+  width: 320px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.2s ease-out;
+}
+
+.whatsapp-header {
+  background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+  color: white;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.whatsapp-content {
+  padding: 16px;
+  background: #f8fafc;
 }
 
 /* Chatbot Floating */
@@ -810,9 +1019,9 @@ nav ul {
 .pagina-content {
   background: #ffffff;
   border-radius: 16px;
-  max-width: 820px;
+  max-width: 960px;
   width: 100%;
-  max-height: 88vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
@@ -827,69 +1036,237 @@ nav ul {
 }
 
 .pagina-header {
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   background: #f8fafc;
 }
 
-.pagina-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--accent-color);
-  background: #eff6ff;
-  padding: 3px 10px;
-  border-radius: 12px;
-  margin-bottom: 6px;
+.pagina-header-left {
+  flex: 1;
+  min-width: 250px;
 }
 
-.pagina-title {
-  font-size: 1.15rem;
-  color: var(--primary-color);
-  font-weight: 600;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.pagina-close-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  font-size: 1.25rem;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.pagina-header-tags {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  margin-left: 1rem;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
-.pagina-close-btn:hover {
+.pagina-badge-accent {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.pagina-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Selector de vista Estructurada / Original */
+.pagina-view-switcher {
+  display: inline-flex;
   background: #e2e8f0;
+  padding: 3px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.btn-view-tab {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.btn-view-tab:hover {
   color: var(--primary-color);
+}
+
+.btn-view-tab.active {
+  background: white;
+  color: var(--primary-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .pagina-body {
-  padding: 2rem;
+  padding: 1.75rem 2rem;
   overflow-y: auto;
   flex: 1;
   background: #ffffff;
 }
 
-.pagina-texto {
-  font-size: 1rem;
-  line-height: 1.75;
+/* Vista Estructurada */
+.pagina-structured-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pagina-seccion-banner {
+  background: #f1f5f9;
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-color);
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.pagina-parrafo-clean {
+  font-size: 0.96rem;
+  line-height: 1.65;
   color: #334155;
+}
+
+/* Tablas financieras y contables */
+.pagina-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  margin: 0.5rem 0;
+}
+
+.pagina-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.pagina-data-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.pagina-data-table th {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.pagina-data-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+.pagina-data-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.pagina-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.pagina-cell-concept {
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 180px;
+}
+
+.pagina-cell-num {
+  padding: 10px 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pagina-num-val {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.num-negative {
+  color: #dc2626 !important;
+}
+
+.pagina-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* Vista Original OCR */
+.pagina-original-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pagina-original-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.btn-copy-raw {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-copy-raw:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.pagina-texto-raw {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1.25rem;
+  border-radius: 10px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
   white-space: pre-wrap;
-  font-family: inherit;
+  word-break: break-word;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .pagina-acciones {

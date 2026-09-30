@@ -5,6 +5,7 @@ import Lugar from './components/Lugar.jsx';
 import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
+import Suscripcion from './components/Suscripcion.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -84,6 +85,12 @@ export default function App() {
 
   let content = null;
   let chatbotFiltros = {};
+
+  let lugarActual = { tipo: 'estado', id: 1 };
+  if (isLugar) {
+    const partes = currentPath.split('/');
+    lugarActual = { tipo: partes[1], id: parseInt(partes[2], 10) };
+  }
 
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
@@ -165,6 +172,8 @@ export default function App() {
           {content}
         </ErrorBoundary>
       </main>
+
+      <Suscripcion key={currentPath} autoOpen={false} lugar={lugarActual} nombre={isLugar ? 'tu gobierno' : 'tu estado'} />
 
       <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} onIr={navigate} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
