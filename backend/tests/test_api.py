@@ -8,9 +8,8 @@ def test_secciones_en_orden(cliente):
 
 
 def test_estados_con_municipios(cliente):
-    estados = cliente.get("/api/estados").json()
-    assert estados[0]["nombre"] == "Guanajuato"
-    assert "Irapuato" in [m["nombre"] for m in estados[0]["municipios"]]
+    estados = {e["nombre"]: e for e in cliente.get("/api/estados").json()}
+    assert "Irapuato" in [m["nombre"] for m in estados["Guanajuato"]["municipios"]]
 
 
 def test_municipio_agrupa_documentos_por_seccion(cliente):
@@ -26,7 +25,14 @@ def test_estado_solo_muestra_documentos_estatales(cliente):
     datos = cliente.get("/api/estados/1").json()
     documentos = [d["id"] for s in datos["secciones"] for d in s["documentos"]]
     assert documentos == [4]
-    assert len(datos["municipios"]) == 3
+    assert {"Irapuato", "León", "Celaya"} <= {m["nombre"] for m in datos["municipios"]}
+
+
+def test_lugares_traen_coordenadas_reales(cliente):
+    irapuato = cliente.get("/api/municipios/1").json()
+    assert round(irapuato["latitud"], 1) == 20.7 and round(irapuato["longitud"], 1) == -101.4
+    guanajuato = cliente.get("/api/estados/1").json()
+    assert guanajuato["latitud"] and guanajuato["longitud"]
 
 
 def test_lugar_inexistente(cliente):

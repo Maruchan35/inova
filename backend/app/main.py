@@ -1,13 +1,14 @@
-import re
+import os
 import sqlite3
 from pathlib import Path
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from . import config, procesamiento
+from . import config, notificaciones, preguntas, procesamiento
+from .busqueda import buscar_fragmentos, filtros_sql
 from .db import abrir, conectar
 from .procesamiento import llm
 
@@ -21,52 +22,6 @@ app.add_middleware(
 )
 
 Con = sqlite3.Connection
-
-
-def _filtros(estado_id=None, municipio_id=None, seccion=None, documento_id=None):
-    """Condiciones WHERE opcionales sobre documentos (d) y secciones (s)."""
-    condiciones, params = [], []
-    for valor, sql in (
-        (estado_id, "d.estado_id = ?"),
-        (municipio_id, "d.municipio_id = ?"),
-        (seccion, "s.clave = ?"),
-        (documento_id, "d.id = ?"),
-    ):
-        if valor is not None:
-            condiciones.append(sql)
-            params.append(valor)
-    return "".join(f" AND {c}" for c in condiciones), params
-
-
-def _consulta_fts(texto: str) -> str:
-    # Palabras de 3+ letras, entre comillas para que FTS5 no las interprete como operadores.
-    palabras = [p for p in re.findall(r"\w+", texto, flags=re.UNICODE) if len(p) >= 3]
-    return " OR ".join(f'"{p}"' for p in palabras)
-
-
-def buscar_fragmentos(con: Con, texto: str, limite: int = 10, **filtros) -> list[dict]:
-    consulta = _consulta_fts(texto)
-    if not consulta:
-        return []
-    where, params = _filtros(**filtros)
-    filas = con.execute(
-        f"""
-        SELECT d.id AS documento_id, d.titulo AS documento_titulo, s.clave AS seccion,
-               COALESCE(m.nombre, e.nombre) AS lugar, p.numero AS pagina,
-               snippet(paginas_fts, 0, '[[', ']]', '…', 24) AS fragmento
-        FROM paginas_fts
-        JOIN paginas p ON p.id = paginas_fts.rowid
-        JOIN documentos d ON d.id = p.documento_id
-        JOIN secciones s ON s.id = d.seccion_id
-        JOIN estados e ON e.id = d.estado_id
-        LEFT JOIN municipios m ON m.id = d.municipio_id
-        WHERE paginas_fts MATCH ?{where}
-        ORDER BY bm25(paginas_fts)
-        LIMIT ?
-        """,
-        (consulta, *params, limite),
-    ).fetchall()
-    return [dict(f) for f in filas]
 
 
 def _secciones_con_documentos(con: Con, estado_id: int, municipio_id: int | None) -> list[dict]:
@@ -111,7 +66,7 @@ def listar_estados(con: Con = Depends(conectar)):
 
 @app.get("/api/estados/{estado_id}")
 def ver_estado(estado_id: int, con: Con = Depends(conectar)):
-    estado = con.execute("SELECT id, nombre FROM estados WHERE id = ?", (estado_id,)).fetchone()
+    estado = con.execute("SELECT id, nombre, latitud, longitud FROM estados WHERE id = ?", (estado_id,)).fetchone()
     if estado is None:
         raise HTTPException(status_code=404, detail="Estado no encontrado")
     municipios = con.execute(
@@ -129,7 +84,7 @@ def ver_estado(estado_id: int, con: Con = Depends(conectar)):
 def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
     fila = con.execute(
         """
-        SELECT m.id, m.nombre, e.id AS estado_id, e.nombre AS estado_nombre
+        SELECT m.id, m.nombre, m.latitud, m.longitud, e.id AS estado_id, e.nombre AS estado_nombre
         FROM municipios m JOIN estados e ON e.id = m.estado_id WHERE m.id = ?
         """,
         (municipio_id,),
@@ -140,6 +95,8 @@ def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
         "tipo": "municipio",
         "id": fila["id"],
         "nombre": fila["nombre"],
+        "latitud": fila["latitud"],
+        "longitud": fila["longitud"],
         "estado": {"id": fila["estado_id"], "nombre": fila["estado_nombre"]},
         "secciones": _secciones_con_documentos(con, fila["estado_id"], fila["id"]),
     }
@@ -215,12 +172,7 @@ class Pregunta(BaseModel):
 
 @app.post("/api/preguntar")
 def preguntar(datos: Pregunta, con: Con = Depends(conectar)):
-    citas = buscar_fragmentos(con, datos.pregunta, limite=5, **datos.model_dump(exclude={"pregunta"}))
-    if not citas:
-        respuesta = "No encontré información sobre eso en los documentos cargados."
-    else:
-        respuesta = f"Encontré {len(citas)} fragmento(s) relevante(s) en los documentos."
-    return {"pregunta": datos.pregunta, "respuesta": respuesta, "citas": citas}
+    return preguntas.responder(con, datos.pregunta, **datos.model_dump(exclude={"pregunta"}))
 
 
 @app.get("/api/proveedores/concentracion")
@@ -229,7 +181,7 @@ def concentracion(
     municipio_id: int | None = None,
     con: Con = Depends(conectar),
 ):
-    where, params = _filtros(estado_id=estado_id, municipio_id=municipio_id)
+    where, params = filtros_sql(estado_id=estado_id, municipio_id=municipio_id)
     filas = con.execute(
         f"""
         SELECT pr.id, pr.nombre, COUNT(c.id) AS contratos, SUM(c.monto) AS monto_total
@@ -297,6 +249,59 @@ async def subir_documento(
     return {"id": documento_id, "estatus": "pendiente"}
 
 
+# --- Avisos por WhatsApp ---
+
+
+class Suscripcion(BaseModel):
+    telefono: str
+    estado_id: int
+    municipio_id: int | None = None
+
+
+class Verificacion(BaseModel):
+    telefono: str
+    codigo: str
+
+
+class Baja(BaseModel):
+    telefono: str | None = None
+    token: str | None = None
+
+
+def _aviso(funcion, *args):
+    try:
+        return funcion(*args)
+    except notificaciones.ErrorAviso as e:
+        raise HTTPException(status_code=e.estatus, detail=str(e))
+
+
+@app.post("/api/suscripciones", status_code=202)
+def suscribirse(datos: Suscripcion, con: Con = Depends(conectar)):
+    """Manda un código por WhatsApp para confirmar que el número es de quien se suscribe."""
+    return _aviso(notificaciones.suscribir, con, datos.telefono, datos.estado_id, datos.municipio_id)
+
+
+@app.post("/api/suscripciones/verificar")
+def verificar_suscripcion(datos: Verificacion, con: Con = Depends(conectar)):
+    return _aviso(notificaciones.verificar, con, datos.telefono, datos.codigo)
+
+
+@app.post("/api/suscripciones/baja")
+def baja_suscripcion(datos: Baja, con: Con = Depends(conectar)):
+    if not datos.token:
+        raise HTTPException(status_code=400, detail="Falta el token de baja")
+    return {"bajas": _aviso(notificaciones.baja_por_token, con, datos.token)}
+
+
+@app.post("/api/interno/baja")
+def baja_desde_whatsapp(datos: Baja, x_bot_token: str = Header(""), con: Con = Depends(conectar)):
+    """La llama el bot de WhatsApp cuando alguien responde BAJA. Protegida con WHATSAPP_BOT_TOKEN."""
+    esperado = os.environ.get("WHATSAPP_BOT_TOKEN", "")
+    if not esperado or x_bot_token != esperado:
+        raise HTTPException(status_code=403, detail="Token inválido")
+    return {"bajas": _aviso(notificaciones.baja_por_telefono, con, datos.telefono or "")}
+
+
 # --- Página de prueba del motor (solo para desarrollo; no es parte del contrato) ---
 
 
@@ -308,6 +313,18 @@ def estado_motor():
 @app.get("/api/prueba/documentos/{documento_id}")
 def bitacora_documento(documento_id: int):
     return procesamiento.BITACORA.get(documento_id) or {}
+
+
+@app.get("/api/prueba/preguntas")
+def bitacora_preguntas():
+    """Últimas preguntas: de dónde salió la respuesta (caché propio, DeepSeek o respaldo), tiempo y costo."""
+    return list(preguntas.BITACORA)
+
+
+@app.get("/api/prueba/avisos")
+def bitacora_avisos():
+    """Últimos mensajes de WhatsApp (enviados o, sin bot, solo de prueba)."""
+    return list(notificaciones.BITACORA)
 
 
 @app.get("/prueba", response_class=HTMLResponse)

@@ -28,7 +28,7 @@ export default function Documento({ id, onVerPagina }) {
     <>
       <div className="doc-detail-header" style={{ marginTop: '2rem' }}>
         <p className="tenue" style={{ marginBottom: '10px' }}>
-          {doc.seccion.nombre} Â· {doc.municipio?.nombre ?? doc.estado.nombre} Â· {doc.anio}
+          {doc.seccion.nombre} · {doc.municipio?.nombre ?? doc.estado.nombre} · {doc.anio}
         </p>
         <h2>{doc.titulo}</h2>
       </div>

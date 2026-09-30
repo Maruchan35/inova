@@ -31,3 +31,8 @@ Thumbs.db
 
 # PDFs subidos al backend
 backend/subidos/
+
+# PDFs oficiales (se comparten por Drive, solo se versiona el CSV con ligas y .gitkeep)
+datos/pdfs/*
+!datos/pdfs/.gitkeep
+

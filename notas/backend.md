@@ -27,25 +27,61 @@
   - Acepta CSV de Excel en español (`;`, cp1252, encabezados con acentos).
   - Se puede volver a ejecutar: salta los `listo` con el mismo `archivo` (se guarda como
     `datos/pdfs/<nombre>`) y retoma los que quedaron con error o a medias, sin duplicar.
-  - 4 tests en `tests/test_cargar.py` (27 en total, con el de `/vista`).
+  - 4 tests en `tests/test_cargar.py`.
+- **Cerebro de `/api/preguntar`** en `backend/app/preguntas.py` (búsqueda movida a `app/busqueda.py`).
+  Mismo formato de salida que en `docs/api.md`. En orden:
+  1. **Caché propio en memoria:** misma pregunta (sin acentos/mayúsculas/signos) + mismos filtros + misma
+     "huella" de documentos listos en ese lugar → respuesta guardada, 0 s y $0. Si llegan varias iguales
+     a la vez, solo la primera llama a la IA. Un documento nuevo en el lugar cambia la huella. Se vacía al
+     reiniciar el servidor (y no se entera si se reprocesa un documento con otro PDF: reiniciar).
+  2. Con `documento_id`: **documento completo** con `[Página N]`, siempre primero y siempre igual → el caché
+     de DeepSeek cobra esa parte 50 veces más barata ($0.006 vs $0.30 por millón). Medido: 99.5% de la
+     entrada salió del caché desde la 2ª pregunta.
+  3. Sin `documento_id` (lugar/sección): las 6 páginas más relevantes de la búsqueda. Sin resultados → no
+     se llama a la IA.
+  4. Reglas: solo datos de los textos, cifras copiadas tal cual (**sin hacer cuentas**: la IA convertía
+     porcentajes a pesos), cada dato con su página; se descartan páginas que no se le mandaron. Si la IA
+     falla o responde un dato sin página → respaldo sin IA (y no se guarda).
+  - `GET /api/prueba/preguntas`: bitácora (origen, modo, tiempo, tokens, costo). `/vista` la muestra debajo
+    de cada respuesta para la demo.
+  - Con DeepSeek real y los datos de ejemplo: ~1 s y ~$0.0002 USD por pregunta.
+  - 10 tests en `tests/test_preguntar.py` con IA simulada (37 en total).
+- **Avisos por WhatsApp** (rama `backend/notificaciones`):
+  - `backend/whatsapp/bot.js` (Node + Baileys): WhatsApp **normal** vinculado con QR como dispositivo
+    (http://127.0.0.1:3001/qr). Va contra las reglas de WhatsApp: usar un chip de repuesto. Manda en fila con
+    pausas de 4-9 s y atiende "BAJA". La sesión queda en `backend/whatsapp/sesion/` (ignorada por Git).
+    Arranque: `cd backend/whatsapp` → `npm install` → `npm start`.
+  - `backend/app/notificaciones.py`: suscribirse con código de 6 dígitos por WhatsApp (máx. 3 códigos por
+    número por hora), verificar, baja (token o "BAJA"), y aviso automático al terminar de procesar un
+    documento (título + 2 puntos clave con página + enlace). Un aviso por documento y teléfono.
+    Quien sigue un municipio recibe sus documentos y los estatales; quien sigue un estado, solo los estatales.
+  - Rutas nuevas (proponer en `docs/api.md`): `POST /api/suscripciones`, `POST /api/suscripciones/verificar`,
+    `POST /api/suscripciones/baja`; internas: `POST /api/interno/baja` (token del bot), `GET /api/prueba/avisos`.
+  - `.env`: `WHATSAPP_BOT_URL`, `WHATSAPP_BOT_TOKEN`, `ENLACE_DOCUMENTO` (dirección pública con `{id}`).
+    Sin `WHATSAPP_BOT_URL` es "modo prueba": los mensajes solo quedan en `/api/prueba/avisos`.
+  - Tablas `suscripciones` y `notificaciones` en `datos/schema.sql` (PR #7 de Marko). 8 tests en
+    `tests/test_notificaciones.py`. `/api/estados/{id}` y `/api/municipios/{id}` traen `latitud`/`longitud`
+    reales (catálogo INEGI) para el mapa. 46 tests en total.
 
 ## Tareas (en orden)
 
-1. ~~Script de carga masiva~~ (hecho en `backend/carga-masiva`). Falta probarlo con los PDFs reales
-   de Marko y con la clave de DeepSeek.
-3. **Respuesta con IA en `/api/preguntar`** usando solo las citas encontradas.
+1. ~~Script de carga masiva~~ (PR #4, en `main`). Falta probarlo con los PDFs reales de Marko.
+3. ~~Respuesta con IA en `/api/preguntar` con caché~~ (rama `backend/respuesta-ia`). Falta medir tiempo y
+   costo con un PDF real de cientos de páginas. Cuando Marko agregue la tabla `respuestas`, pasar el caché
+   de memoria a la base.
 4. Extraer contratos (proveedor, concepto, monto, página) → `proveedores` y `contratos`.
 5. Opcional: OCR para PDFs escaneados.
 
 ## En progreso
 
-- Rama: `backend/carga-masiva`
-- Tarea: carga masiva lista y probada sin IA (PDFs sintéticos); pendiente PR a `main`
+- Rama: `backend/notificaciones`
+- Tarea: avisos por WhatsApp listos en modo prueba; falta vincular el número (QR) y probar con teléfonos reales
 
 ## Para retomar en una sesión nueva (léelo primero)
 
-1. Rama de trabajo: **`backend/carga-masiva`** (creada desde `main` con el motor ya unido en el PR #3).
-   `git checkout backend/carga-masiva && git fetch origin && git merge origin/main`.
+1. Rama de trabajo: **`backend/respuesta-ia`**. El repo está en `Documents\inova\inova` (la carpeta de
+   afuera es otro repo viejo: no hagas push desde ahí). `git checkout backend/respuesta-ia`,
+   `git fetch origin`, `git merge origin/main`.
 2. **Clave de DeepSeek:** está en `backend/.env` (solo local, Git la ignora). Si no existe en esta
    computadora, pídesela al usuario y créala con el formato de `backend/.env.example`. **Nunca la subas.**
 3. **Base de datos local:** `python datos/init_db.py` la borra y la recrea con los datos de ejemplo.
@@ -57,8 +93,10 @@
 5. **Carga masiva (hecha):** `cd backend` → `python cargar.py --solo-revisar` y luego `python cargar.py`.
    Formato del CSV (**confirmarlo con Marko**, que lo llena): `archivo,estado,municipio,seccion,titulo,anio`,
    con los PDFs en `datos/pdfs/`. Si Marko aún no tiene el CSV: `--csv` y `--pdfs` apuntan a otro lugar.
-6. Siguiente: respuesta con IA en `/api/preguntar` (solo con las citas; mismo formato de salida) y extraer
-   contratos a `proveedores`/`contratos`.
+6. **Preguntas con IA (hecho):** ver "Cerebro" arriba. Si cambias los textos para la IA en `preguntas.py`,
+   **reinicia el servidor**: el caché propio guarda las respuestas viejas y `--reload` a veces no detecta
+   el cambio en Windows.
+7. Siguiente: extraer contratos a `proveedores`/`contratos`.
 
 Cosas a saber de esta computadora (Windows):
 - La terminal del usuario es **PowerShell 5.1**: no acepta `&&`; dale comandos de una línea o separados.
@@ -74,4 +112,5 @@ Cosas a saber de esta computadora (Windows):
 - **Modo pensar desactivado** (`"thinking": {"type": "disabled"}`): con él activo, el mismo PDF tardó
   25 s y costó 4 veces más (6,347 tokens de salida contra 475), sin mejorar el resumen.
 - Estimación: un documento de 500 páginas cuesta ~$0.10-0.15 USD en procesarse, una sola vez.
-- Pendiente para Marko: agregar Baja California (o todos los estados) al catálogo de lugares.
+- Pendiente para Marko: agregar Baja California (o todos los estados) al catálogo de lugares, confirmar el
+  formato de `datos/documentos.csv` y agregar la tabla `respuestas` (caché de preguntas permanente).

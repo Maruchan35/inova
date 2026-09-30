@@ -10,6 +10,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
+from .. import notificaciones
 from . import llm
 from .resumen import resumir_con_ia, resumir_sin_ia
 
@@ -60,6 +61,10 @@ def procesar(con: sqlite3.Connection, documento_id: int, ruta: Path) -> None:
             (len(paginas), resumen, documento_id),
         )
         con.commit()
+        try:  # avisar por WhatsApp a quienes siguen ese lugar; si falla, el documento ya quedó listo
+            bitacora["avisos"] = notificaciones.notificar_documento(con, documento_id)
+        except Exception as e:
+            bitacora["aviso"] = f"No se pudieron mandar los avisos por WhatsApp ({type(e).__name__}: {e})"
     except Exception as e:
         con.rollback()
         con.execute("UPDATE documentos SET estatus = 'error', error = ? WHERE id = ?", (str(e), documento_id))

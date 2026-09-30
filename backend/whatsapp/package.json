@@ -1,0 +1,1 @@
+{"name":"cabildo-whatsapp-bot","private":true,"type":"module","scripts":{"start":"node bot.js"},"dependencies":{"@whiskeysockets/baileys":"7.0.0-rc14","qrcode":"1.5.4"}}

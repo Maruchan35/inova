@@ -28,8 +28,9 @@
 
 ## Decisiones y problemas
 
-- Se creÃ³ un router custom usando `window.history.pushState` y el evento `popstate` para manejar rutas directas: `/`, `/estado/:id`, `/municipio/:id`, `/documento/:id`.
-- BotÃ³n de atrÃ¡s integrado con `window.history.back()`.
-- Nuevo componente `Suscripcion.jsx` para el flujo de WhatsApp (ingreso de telÃ©fono -> validaciÃ³n de cÃ³digo).
-- Se actualizÃ³ `api.js` para propagar los errores `detail` que manda el backend, necesario para mostrar correctamente los fallos en la suscripciÃ³n (ej. cÃ³digo incorrecto).
+- Se creó un router custom usando `window.history.pushState` y el evento `popstate` para manejar rutas directas: `/`, `/estado/:id`, `/municipio/:id`, `/documento/:id`.
+- Botón de atrás integrado con `window.history.back()`.
+- Nuevo componente `Suscripcion.jsx` para el flujo de WhatsApp (ingreso de teléfono -> validación de código).
+- Se actualizó `api.js` para propagar los errores `detail` que manda el backend, necesario para mostrar correctamente los fallos en la suscripción (ej. código incorrecto).
 - Los acentos fueron corregidos en los archivos JSX localmente tras problemas con fetch.
+- Falta: Formulario para subir documentos y la gráfica de concentración visual con porcentaje de riesgo.

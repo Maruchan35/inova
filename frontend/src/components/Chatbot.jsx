@@ -55,7 +55,7 @@ export default function Chatbot({ filtros, onVerPagina }) {
                     {m.resultado.citas.map(c => (
                       <div key={`${c.documento_id}-${c.pagina}`} className="cita">
                         <button className="btn-link" onClick={() => onVerPagina(c.documento_id, c.pagina)}>
-                          <strong>{c.documento_titulo}</strong> Â· pág. {c.pagina} ({c.lugar})
+                          <strong>{c.documento_titulo}</strong> · pág. {c.pagina} ({c.lugar})
                         </button>
                         <p><Fragmento texto={c.fragmento} /></p>
                       </div>
