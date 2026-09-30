@@ -97,9 +97,33 @@
   gana sobre la página. Primero elige documentos (título + páginas que tratan el tema) y luego:
   panorama → explica el documento con su inicio y sus páginas del tema (si hay varios parecidos, dice cuáles);
   dato → busca dentro de esos documentos. La respuesta trae `documentos` y `detalle.entendido`.
-- Siguiente: leer Word y Excel (Marko ya tiene 2 Excel oficiales en el CSV), guardar en `documentos` las
-  columnas nuevas del CSV (`url_fuente`, `sha256`…, y verificar el hash), verificador de páginas de las
-  cifras, caché de preguntas en la tabla `respuestas`, y botón "ver documento oficial" con `url_fuente`.
+- **Cerebro v3** (rama `backend/cerebro-v3`, PR #24; 81 tests). Todo en `backend/app/preguntas.py`:
+  - **Verificador de cifras** (`cifras`, `_verificar_cifras`): cada cifra de la respuesta se busca en las páginas
+    que vio la IA. Acepta redondeos y "millones" ("3,200 millones" = "$3,200,000,000.00") y cifras como vienen en
+    los PDF (pegadas al texto de la tabla, "13, 200", "$2,500.000,000.00"). Si está en una página no citada, se
+    cita; si no está en ninguna, va en `detalle.cifras_sin_verificar` y el chatbot avisa.
+  - **Memoria** (`_seguimiento`): `/api/preguntar` recibe `historial`. "¿y en León?", "¿y en 2024?", "¿qué dice de
+    seguridad?" se buscan con el tema de la pregunta anterior (el lugar nuevo reemplaza al de antes) y la IA recibe
+    las 2 últimas preguntas con su respuesta. Una pregunta con su lugar y su tema se toma como nueva.
+  - **Comparar lugares** (`_con_comparacion`): `entender` devuelve todos los `lugares`; con 2 o más junta hasta
+    3 páginas de cada uno. Para un estado solo usa documentos del gobierno del estado; para un municipio, un
+    documento estatal solo cuenta si la página lo nombra. Si de un lugar no hay nada, se le dice a la IA.
+  - **Caché más listo**: la clave usa las palabras importantes ordenadas (`_clave_pregunta`), así "¿qué dice el
+    presupuesto de Jalisco?" y "háblame del presupuesto de jalisco" son la misma. "no", "sin", "cuánto"… se quedan.
+  - **Tope de gasto diario** (`DEEPSEEK_TOPE_DIARIO_USD`, 3 por defecto): el gasto del día se lleva en
+    `backend/gasto_ia.json`; al llegar al tope responde sin IA hasta el día siguiente.
+  - **Preguntas sugeridas**: `GET /api/preguntas-sugeridas` (portada, estado, municipio o documento) y
+    `python precalentar.py` para dejarlas en el caché antes de la demo (51 preguntas ≈ $0.04 USD fuera de hora pico).
+  - Orden de documentos: primero los del gobierno del estado si se pregunta por un estado, el año que pide la
+    pregunta, y las páginas que tratan el tema cuentan con tope (un anexo de 1,000 páginas ya no gana solo por tamaño).
+  - `llm.py` reintenta si DeepSeek responde 429 o 5xx. Un 402 es **sin saldo**: hay que recargar en
+    platform.deepseek.com; mientras tanto el chatbot responde con los fragmentos.
+- **Reclasificación con IA** (`python reclasificar.py`): ya se corrió con los 1,687 documentos (1,626 títulos
+  nuevos, 180 cambios de sección, año y una descripción de 1-2 frases). **Resúmenes con IA**
+  (`python resumir.py`): van 232; faltan ~1,450 (~$3 USD fuera de hora pico, lee hasta 120 mil caracteres por
+  documento; sigue donde se quedó y se detiene solo si se acaba el saldo).
+- Siguiente: terminar los resúmenes cuando haya saldo y publicar la base nueva en Releases (sin datos
+  personales); leer Word y Excel; extraer contratos a `proveedores`/`contratos`; OCR de los escaneados.
 - Resuelto de datos (Marko): claves INEGI corregidas en Guanajuato (San Miguel 11003 y 34..46 ajustadas), Oaxaca (desambiguados San Juan y San Pedro Mixtepec con distritos) y Chiapas (Honduras de la Sierra 07125 sin duplicados). Catálogo de 2,475 municipios 100% verificado.
 
 ## Para retomar en una sesión nueva (léelo primero)
