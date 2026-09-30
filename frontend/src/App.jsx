@@ -5,6 +5,7 @@ import Lugar from './components/Lugar.jsx';
 import Documento from './components/Documento.jsx';
 import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
+import Suscripcion from './components/Suscripcion.jsx';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -57,11 +58,21 @@ export default function App() {
     content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} />;
   }
 
+  let lugarActual = { tipo: 'estado', id: 1 };
+  if (isLugar) {
+    const partes = currentPath.split('/');
+    lugarActual = { tipo: partes[1], id: parseInt(partes[2], 10) };
+  }
+
   return (
     <>
       <header>
-        <div className="logo">
-          <i className="fa-regular fa-message"></i> CabildoAbierto
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color, #4a90e2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+          <span style={{ color: 'var(--primary-color)' }}>CabildoAbierto</span>
         </div>
         <nav>
           <ul>
@@ -104,6 +115,7 @@ export default function App() {
         {content}
       </main>
 
+      <Suscripcion key={currentPath} autoOpen={currentPath === '/'} lugar={lugarActual} nombre={isLugar ? 'tu gobierno' : 'tu estado'} />
       <Chatbot filtros={chatbotFiltros} contexto={contexto} onVerPagina={verPagina} abiertoPorDefecto={chatbotAbierto} onCerrar={() => setChatbotAbierto(false)} />
 
       <footer>

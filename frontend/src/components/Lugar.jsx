@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import Concentracion from './Concentracion.jsx';
-import Suscripcion from './Suscripcion.jsx';
 
 // Coordenadas base por defecto si no hay
 const DEFAULT_CENTER = [23.6345, -102.5528]; // México
@@ -165,8 +164,6 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       )}
 
       <Concentracion filtros={filtros} locationName={locationName} />
-      
-      <Suscripcion lugar={lugar} />
     </div>
   );
 }

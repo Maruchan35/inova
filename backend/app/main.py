@@ -55,7 +55,7 @@ def listar_secciones(con: Con = Depends(conectar)):
 
 @app.get("/api/estados")
 def listar_estados(con: Con = Depends(conectar)):
-    estados = [dict(e) for e in con.execute("SELECT id, nombre FROM estados ORDER BY nombre")]
+    estados = [dict(e) for e in con.execute("SELECT id, nombre, latitud, longitud FROM estados ORDER BY nombre")]
     for e in estados:
         e["municipios"] = [
             dict(m)
