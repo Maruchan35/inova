@@ -23,12 +23,13 @@
 
 ## En progreso
 
-- Rama: `frontend/diseno`
-- Tarea: Mover el diseÃ±o a React e integrarlo con `api.js`.
+- Rama: `frontend/rutas-y-avisos`
+- Tarea: Router sin dependencias y Formulario de WhatsApp
 
 ## Decisiones y problemas
 
-- El diseÃ±o de la portada, ranking, lugares y documentos se moviÃ³ a componentes React en `frontend/src/components/`.
-- Se removiÃ³ completamente el mapa estÃ¡tico ya que no habÃ­a datos de obras geolocalizados, alineÃ¡ndose con la guÃ­a de evitar dependencias extra si no era funcional.
-- El Chatbot fue integrado exitosamente usando `api.preguntar()`.
-- Falta: Formulario para subir documentos y la grÃ¡fica de concentraciÃ³n visual con porcentaje de riesgo.
+- Se creÃ³ un router custom usando `window.history.pushState` y el evento `popstate` para manejar rutas directas: `/`, `/estado/:id`, `/municipio/:id`, `/documento/:id`.
+- BotÃ³n de atrÃ¡s integrado con `window.history.back()`.
+- Nuevo componente `Suscripcion.jsx` para el flujo de WhatsApp (ingreso de telÃ©fono -> validaciÃ³n de cÃ³digo).
+- Se actualizÃ³ `api.js` para propagar los errores `detail` que manda el backend, necesario para mostrar correctamente los fallos en la suscripciÃ³n (ej. cÃ³digo incorrecto).
+- Los acentos fueron corregidos en los archivos JSX localmente tras problemas con fetch.

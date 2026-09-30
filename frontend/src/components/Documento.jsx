@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { api } from '../api.js';
 import Chatbot from './Chatbot.jsx';
 
@@ -37,7 +37,7 @@ export default function Documento({ id, onVerPagina }) {
         <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', textAlign: 'center' }}>
           <i className="fa-regular fa-spinner-third fa-spin fa-2x" style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}></i>
           <p style={{ fontSize: '1.2rem', color: 'var(--primary-color)', fontWeight: 500 }}>Procesando documento...</p>
-          <p className="tenue">La IA estÃ¡ analizando y extrayendo los datos importantes ({doc.estatus}).</p>
+          <p className="tenue">La IA está analizando y extrayendo los datos importantes ({doc.estatus}).</p>
         </div>
       ) : (
         <>
@@ -46,14 +46,14 @@ export default function Documento({ id, onVerPagina }) {
             {doc.resumen}
           </div>
 
-          <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1.5rem' }}>Lo mÃ¡s importante</h3>
+          <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1.5rem' }}>Lo más importante</h3>
           <ul className="doc-puntos">
             {doc.puntos_clave.map((p, i) => (
               <li key={i}>
                 <span style={{ paddingRight: '1rem', lineHeight: '1.5' }}>{p.texto}</span>
                 {p.pagina && (
                   <button onClick={() => onVerPagina(doc.id, p.pagina)}>
-                    pÃ¡g. {p.pagina}
+                    pág. {p.pagina}
                   </button>
                 )}
               </li>

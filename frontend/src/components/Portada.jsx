@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 
 function quitarAcentos(str) {
@@ -48,7 +48,7 @@ export default function Portada({ onElegir }) {
   return (
     <>
       <section className="hero">
-        <h1>Explora la informaciÃ³n de tu ciudad</h1>
+        <h1>Explora la información de tu ciudad</h1>
         <p>Busca cualquier estado o municipio y accede a informes, presupuestos y contratos al instante.</p>
         
         <div className="search-container" ref={wrapperRef}>
@@ -79,50 +79,50 @@ export default function Portada({ onElegir }) {
       </section>
 
       <section style={{ textAlign: 'center', marginTop: '3rem', overflow: 'hidden' }}>
-        <h3 style={{ color: 'var(--text-muted)', fontWeight: 400, marginBottom: '2rem' }}>Â¿CÃ³mo funciona CabildoAbierto?</h3>
+        <h3 style={{ color: 'var(--text-muted)', fontWeight: 400, marginBottom: '2rem' }}>¿Cómo funciona CabildoAbierto?</h3>
         
         <div className="como-funciona-container">
           <div className="como-funciona-track">
             <div className="cf-card">
               <i className="fa-regular fa-file-pdf"></i>
-              <h4>1. RecopilaciÃ³n de datos</h4>
-              <p>Los gobiernos suben sus documentos pÃºblicos y reportes.</p>
+              <h4>1. Recopilación de datos</h4>
+              <p>Los gobiernos suben sus documentos públicos y reportes.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-microchip"></i>
               <h4>2. Procesamiento de IA</h4>
-              <p>La IA extrae resÃºmenes y puntos clave automÃ¡ticamente.</p>
+              <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-message"></i>
-              <h4>3. BÃºsqueda Inteligente</h4>
+              <h4>3. Búsqueda Inteligente</h4>
               <p>Haces preguntas y recibes respuestas directas y claras.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-check-circle"></i>
-              <h4>4. VerificaciÃ³n</h4>
+              <h4>4. Verificación</h4>
               <p>Revisas la fuente exacta con un solo clic.</p>
             </div>
             
             {/* Duplicated for seamless loop */}
             <div className="cf-card">
               <i className="fa-regular fa-file-pdf"></i>
-              <h4>1. RecopilaciÃ³n de datos</h4>
-              <p>Los gobiernos suben sus documentos pÃºblicos y reportes.</p>
+              <h4>1. Recopilación de datos</h4>
+              <p>Los gobiernos suben sus documentos públicos y reportes.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-microchip"></i>
               <h4>2. Procesamiento de IA</h4>
-              <p>La IA extrae resÃºmenes y puntos clave automÃ¡ticamente.</p>
+              <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-message"></i>
-              <h4>3. BÃºsqueda Inteligente</h4>
+              <h4>3. Búsqueda Inteligente</h4>
               <p>Haces preguntas y recibes respuestas directas y claras.</p>
             </div>
             <div className="cf-card">
               <i className="fa-regular fa-check-circle"></i>
-              <h4>4. VerificaciÃ³n</h4>
+              <h4>4. Verificación</h4>
               <p>Revisas la fuente exacta con un solo clic.</p>
             </div>
           </div>

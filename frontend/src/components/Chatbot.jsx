@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { api } from '../api.js';
 import Fragmento from './Fragmento.jsx';
 
@@ -7,7 +7,7 @@ export default function Chatbot({ filtros, onVerPagina }) {
   const [pregunta, setPregunta] = useState('');
   const [mensajes, setMensajes] = useState([{
     tipo: 'bot',
-    texto: 'Â¡Hola! Soy el asistente RAG de CabildoAbierto. Puedo leer contratos, presupuestos y auditorÃ­as por ti. Â¿Sobre quÃ© obra te gustarÃ­a consultar hoy?'
+    texto: '¡Hola! Soy el asistente RAG de CabildoAbierto. Puedo leer contratos, presupuestos y auditorías por ti. ¿Sobre qué obra te gustaría consultar hoy?'
   }]);
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef(null);
@@ -55,7 +55,7 @@ export default function Chatbot({ filtros, onVerPagina }) {
                     {m.resultado.citas.map(c => (
                       <div key={`${c.documento_id}-${c.pagina}`} className="cita">
                         <button className="btn-link" onClick={() => onVerPagina(c.documento_id, c.pagina)}>
-                          <strong>{c.documento_titulo}</strong> Â· pÃ¡g. {c.pagina} ({c.lugar})
+                          <strong>{c.documento_titulo}</strong> Â· pág. {c.pagina} ({c.lugar})
                         </button>
                         <p><Fragmento texto={c.fragmento} /></p>
                       </div>
@@ -71,7 +71,7 @@ export default function Chatbot({ filtros, onVerPagina }) {
               type="text"
               value={pregunta}
               onChange={e => setPregunta(e.target.value)}
-              placeholder="Ej. Â¿CuÃ¡nto costÃ³ el hospital?"
+              placeholder="Ej. ¿Cuánto costó el hospital?"
               onKeyDown={e => e.key === 'Enter' && enviar()}
             />
             <button onClick={enviar}><i className="fa-regular fa-paper-plane"></i></button>

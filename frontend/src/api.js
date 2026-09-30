@@ -1,7 +1,16 @@
 // Todas las llamadas al backend pasan por aquí. Rutas y formatos: docs/api.md
 async function pedir(ruta, opciones) {
   const res = await fetch(`/api${ruta}`, opciones)
-  if (!res.ok) throw new Error(`Error ${res.status} en ${ruta}`)
+  if (!res.ok) {
+    let detail = `Error ${res.status} en ${ruta}`
+    try {
+      const errorJson = await res.json()
+      if (errorJson.detail) {
+        detail = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail)
+      }
+    } catch (e) {}
+    throw new Error(detail)
+  }
   return res.json()
 }
 
@@ -25,4 +34,16 @@ export const api = {
       body: JSON.stringify({ pregunta, ...filtros }),
     }),
   concentracion: (filtros) => pedir(`/proveedores/concentracion${query(filtros)}`),
+  suscribir: (telefono, estado_id, municipio_id) =>
+    pedir('/suscripciones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefono, estado_id, municipio_id: municipio_id || null }),
+    }),
+  verificarSuscripcion: (telefono, codigo) =>
+    pedir('/suscripciones/verificar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefono, codigo }),
+    })
 }

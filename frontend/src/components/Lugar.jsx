@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import Concentracion from './Concentracion.jsx';
 import Chatbot from './Chatbot.jsx';
+import Suscripcion from './Suscripcion.jsx';
 
 // Coordenadas base por defecto si no hay
-const DEFAULT_CENTER = [23.6345, -102.5528]; // MÃ©xico
+const DEFAULT_CENTER = [23.6345, -102.5528]; // México
 
 export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
   const [datos, setDatos] = useState(null);
@@ -39,7 +40,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
 
     // Simularemos el centro basado en un hash del nombre del lugar para no mover el mapa al azar
     const hash = datos.nombre.length; 
-    // MÃ©xico center +- some degrees
+    // México center +- some degrees
     const centerLat = 20 + (hash % 10) * 0.5;
     const centerLng = -100 + (hash % 10) * 0.5;
     
@@ -105,7 +106,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
   }, [categoriaActiva, datos]);
 
 
-  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando informaciÃ³n...</div>;
+  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
 
   const filtros = lugar.tipo === 'estado' ? { estado_id: datos.id } : { municipio_id: datos.id };
   const locationName = datos.nombre + (datos.estado ? `, ${datos.estado.nombre}` : '');
@@ -137,7 +138,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
           <i className="fa-regular fa-map-location-dot" style={{ color: 'var(--accent-color)' }}></i> {locationName}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-          Selecciona una categorÃ­a para visualizar los documentos en el mapa.
+          Selecciona una categoría para visualizar los documentos en el mapa.
         </p>
       </div>
 
@@ -163,7 +164,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
       </h3>
       
       {docsToShow.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>No hay documentos en esta secciÃ³n.</p>
+        <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>No hay documentos en esta sección.</p>
       ) : (
         <div className="docs-carousel-container">
           {docsToShow.map(d => (
@@ -181,12 +182,14 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
       )}
 
       <div className="cta-container">
-        <button className="cta-btn" onClick={() => alert("AquÃ­ se abrirÃ­a la vista completa de categorÃ­as y aÃ±os.")}>
+        <button className="cta-btn" onClick={() => alert("Aquí se abriría la vista completa de categorías y años.")}>
           Ver todos los archivos
         </button>
       </div>
 
       <Concentracion filtros={filtros} locationName={locationName} />
+      
+      <Suscripcion lugar={lugar} />
       
       <Chatbot filtros={filtros} onVerPagina={onVerPagina} />
     </div>
