@@ -94,7 +94,7 @@ export default function App() {
 
   if (isDocumento) {
     const id = parseInt(currentPath.split('/')[2], 10);
-    content = <Documento id={id} onVerPagina={verPagina} onIr={navigate} onContexto={setContexto} />;
+    content = <Documento id={id} onVerPagina={verPagina} onIr={navigate} onContexto={setContexto} onChat={() => setChatbotAbierto(true)} />;
     chatbotFiltros = { documento_id: id };
   } else if (isLugar) {
     const partes = currentPath.split('/');

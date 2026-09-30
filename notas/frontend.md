@@ -34,3 +34,5 @@
 - Se actualizó `api.js` para propagar los errores `detail` que manda el backend, necesario para mostrar correctamente los fallos en la suscripción (ej. código incorrecto).
 - Los acentos fueron corregidos en los archivos JSX localmente tras problemas con fetch.
 - Falta: Formulario para subir documentos y la gráfica de concentración visual con porcentaje de riesgo.
+
+- **Chat más grande y ajustable** (rama `frontend/chat-grande-y-boton`, Jorge, 30 sep): la ventana del chatbot abre en 440×600, tiene un botón para ampliarla y se puede ajustar arrastrando su esquina de arriba a la izquierda (el tamaño se recuerda en el navegador). La página del documento tiene el botón "Chat con IA", que abre el chat sobre ese documento.

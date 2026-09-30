@@ -21,7 +21,7 @@ function cleanPuntoText(texto) {
   return s.trim();
 }
 
-export default function Documento({ id, onVerPagina, onIr, onContexto }) {
+export default function Documento({ id, onVerPagina, onIr, onContexto, onChat }) {
   const [doc, setDoc] = useState(null);
   const [error, setError] = useState(null);
 
@@ -146,6 +146,11 @@ export default function Documento({ id, onVerPagina, onIr, onContexto }) {
               <a href={fuente.url_fuente} target="_blank" rel="noopener noreferrer" className="btn-doc-web">
                 <i className="fa-solid fa-arrow-up-right-from-square"></i> Portal oficial
               </a>
+            )}
+            {onChat && doc.estatus === 'listo' && (
+              <button className="btn-doc-chat" onClick={onChat} title="Pregúntale a la IA sobre este documento">
+                <i className="fa-solid fa-wand-magic-sparkles"></i> Chat con IA
+              </button>
             )}
           </div>
         </div>

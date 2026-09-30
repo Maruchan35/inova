@@ -27,8 +27,29 @@ function historialDe(mensajes) {
   return pares.slice(-3);
 }
 
+// Tamaño de la ventana del chat: se puede ampliar con un botón o arrastrando su esquina, y se recuerda.
+const TAM_NORMAL = { ancho: 440, alto: 600 };
+const TAM_GRANDE = { ancho: 860, alto: 2000 };
+
+function limitar(t) {
+  return {
+    ancho: Math.round(Math.max(320, Math.min(t.ancho, window.innerWidth - 40))),
+    alto: Math.round(Math.max(360, Math.min(t.alto, window.innerHeight - 120))),
+  };
+}
+
+function tamGuardado() {
+  try {
+    const t = JSON.parse(localStorage.getItem('chat-tam'));
+    if (t && t.ancho > 0 && t.alto > 0) return t;
+  } catch (e) {}
+  return TAM_NORMAL;
+}
+
 export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoPorDefecto, onCerrar }) {
   const [open, setOpen] = useState(false);
+  const [tam, setTam] = useState(tamGuardado);
+  const inputRef = useRef(null);
   const [pregunta, setPregunta] = useState('');
   const [mensajes, setMensajes] = useState([{
     tipo: 'bot',
@@ -68,6 +89,30 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [mensajes, cargando]);
 
+  // Al abrirlo (con su botón o con "Chat con IA" de un documento), listo para escribir.
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    try { localStorage.setItem('chat-tam', JSON.stringify(tam)); } catch (e) {}
+  }, [tam]);
+
+  // La ventana está pegada abajo a la derecha: crece al arrastrar su esquina de arriba a la izquierda.
+  function empezarAjuste(e) {
+    e.preventDefault();
+    const inicio = { x: e.clientX, y: e.clientY, ...limitar(tam) };
+    const mover = ev => setTam(limitar({ ancho: inicio.ancho + inicio.x - ev.clientX, alto: inicio.alto + inicio.y - ev.clientY }));
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  }
+
+  const ampliado = tam.ancho > TAM_NORMAL.ancho + 60;
+
   async function enviar(elegida) {
     const txt = (typeof elegida === 'string' ? elegida : pregunta).trim();
     if (!txt || cargando) return;
@@ -92,13 +137,21 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
         <i className={open ? "fa-solid fa-xmark" : "fa-regular fa-message"}></i>
       </div>
       {open && (
-        <div className="chat-window">
+        <div className="chat-window" style={{ width: tam.ancho, height: tam.alto }}>
+          <span className="chat-ajustar" onPointerDown={empezarAjuste} title="Arrastra para cambiar el tamaño"></span>
           <div className="chat-header">
             <div>
               <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
               {contexto && <small className="chat-contexto">Preguntando sobre: {contexto}</small>}
             </div>
-            <i className="fa-solid fa-xmark close-btn" onClick={() => { setOpen(false); if (onCerrar) onCerrar(); }} style={{ cursor: 'pointer' }}></i>
+            <div className="chat-header-botones">
+              <i
+                className={ampliado ? "fa-solid fa-compress" : "fa-solid fa-expand"}
+                title={ampliado ? "Tamaño normal" : "Hacer más grande"}
+                onClick={() => setTam(ampliado ? TAM_NORMAL : limitar(TAM_GRANDE))}
+              ></i>
+              <i className="fa-solid fa-xmark close-btn" title="Cerrar" onClick={() => { setOpen(false); if (onCerrar) onCerrar(); }}></i>
+            </div>
           </div>
           <div className="chat-messages" ref={bodyRef}>
             {mensajes.map((m, i) => (
@@ -154,6 +207,7 @@ export default function Chatbot({ filtros, contexto, onVerPagina, onIr, abiertoP
           </div>
           <div className="chat-input">
             <input
+              ref={inputRef}
               type="text"
               value={pregunta}
               onChange={e => setPregunta(e.target.value)}
