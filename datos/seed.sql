@@ -8,9 +8,9 @@ INSERT INTO secciones (id, clave, nombre, orden) VALUES
 (4, 'actas',       'Actas de cabildo',         4),
 (5, 'contratos',   'Contratos y licitaciones', 5);
 
-INSERT INTO estados (id, nombre) VALUES (1, 'Guanajuato');
+INSERT OR IGNORE INTO estados (id, nombre) VALUES (1, 'Guanajuato');
 
-INSERT INTO municipios (id, estado_id, nombre) VALUES
+INSERT OR IGNORE INTO municipios (id, estado_id, nombre) VALUES
 (1, 1, 'Irapuato'),
 (2, 1, 'León'),
 (3, 1, 'Celaya');

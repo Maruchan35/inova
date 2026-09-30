@@ -111,7 +111,12 @@ Monto por proveedor, de mayor a menor. Filtros opcionales `estado_id` y `municip
 | `puntos_clave` | `id`, `documento_id`, `orden`, `texto`, `pagina` | "Lo más importante", con su página |
 | `proveedores` | `id`, `nombre`, `rfc` | |
 | `contratos` | `id`, `documento_id`, `pagina`, `proveedor_id`, `concepto`, `monto`, `fecha` | |
+| `obras` | `id`, `municipio_id`, `titulo`, `categoria`, `latitud`, `longitud`, `presupuesto_aprobado`, `presupuesto_ejercido`, `nivel_alerta`, `anio` | Obras georreferenciadas |
+| `respuestas` | `id`, `clave`, `pregunta`, `respuesta`, `citas_json`, `creado_en` | Caché persistente para IA |
+| `suscripciones` | `id`, `telefono`, `estado_id`, `municipio_id`, `verificada`, `activa`, `codigo`, `codigo_expira`, `token_baja`, `creada_en` | Avisos WhatsApp (la escribe el backend; `municipio_id` NULL = solo estatal) |
+| `notificaciones` | `id`, `suscripcion_id`, `documento_id`, `estatus`, `detalle`, `enviada_en` | Avisos enviados (la escribe el backend; `UNIQUE(suscripcion_id, documento_id)`) |
 
 **Quién escribe qué:** el bloque datos define las tablas y carga estados, municipios, secciones y
 datos de ejemplo. El procesador del backend llena `documentos` (estatus, resumen, total_paginas),
-`paginas`, `puntos_clave`, `proveedores` y `contratos` al procesar cada PDF.
+`paginas`, `puntos_clave`, `proveedores` y `contratos` al procesar cada PDF. Las tablas
+`suscripciones` y `notificaciones` las escribe el backend al gestionar los avisos por WhatsApp.
