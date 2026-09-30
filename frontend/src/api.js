@@ -27,12 +27,15 @@ export const api = {
   documento: (id) => pedir(`/documentos/${id}`),
   pagina: (documentoId, numero) => pedir(`/documentos/${documentoId}/paginas/${numero}`),
   buscar: (q, filtros) => pedir(`/buscar${query({ q, ...filtros })}`),
-  preguntar: (pregunta, filtros) =>
+  // historial: [{ pregunta, respuesta }] de la conversación, para que entienda "¿y en León?"
+  preguntar: (pregunta, filtros, historial = []) =>
     pedir('/preguntar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pregunta, ...filtros }),
+      body: JSON.stringify({ pregunta, ...filtros, historial }),
     }),
+  sugeridas: (filtros = {}) =>
+    pedir(`/preguntas-sugeridas${query({ estado_id: filtros.estado_id, municipio_id: filtros.municipio_id, documento_id: filtros.documento_id })}`),
   concentracion: (filtros) => pedir(`/proveedores/concentracion${query(filtros)}`),
   suscribir: (telefono, estado_id, municipio_id) =>
     pedir('/suscripciones', {

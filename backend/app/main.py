@@ -195,11 +195,20 @@ class Pregunta(BaseModel):
     municipio_id: int | None = None
     seccion: str | None = None
     documento_id: int | None = None
+    historial: list[dict] = []  # la conversación: [{"pregunta": "...", "respuesta": "..."}], de la más vieja a la última
 
 
 @app.post("/api/preguntar")
 def preguntar(datos: Pregunta, con: Con = Depends(conectar)):
-    return preguntas.responder(con, datos.pregunta, **datos.model_dump(exclude={"pregunta"}))
+    return preguntas.responder(con, datos.pregunta, historial=datos.historial[-4:],
+                               **datos.model_dump(exclude={"pregunta", "historial"}))
+
+
+@app.get("/api/preguntas-sugeridas")
+def preguntas_sugeridas(estado_id: int | None = None, municipio_id: int | None = None,
+                        documento_id: int | None = None, con: Con = Depends(conectar)):
+    """Preguntas de ejemplo para el chatbot según la página en la que se está."""
+    return preguntas.sugeridas(con, estado_id, municipio_id, documento_id)
 
 
 @app.get("/api/proveedores/concentracion")

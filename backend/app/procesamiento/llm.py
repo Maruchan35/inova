@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 
 import httpx
 
@@ -10,6 +11,9 @@ import httpx
 PRECIO_ENTRADA = 0.30
 PRECIO_ENTRADA_CACHE = 0.006
 PRECIO_SALIDA = 1.20
+# Si DeepSeek responde 429 (demasiadas peticiones) o falla de su lado (5xx), se reintenta tras estas esperas.
+# Un 402 (sin saldo) no se reintenta.
+ESPERAS = (2, 6)
 
 
 def modelo() -> str:
@@ -22,20 +26,25 @@ def configurado() -> bool:
 
 def pedir_json(sistema: str, usuario: str, uso: dict) -> dict:
     """Llama al modelo pidiendo JSON y acumula los tokens usados en `uso`."""
-    respuesta = httpx.post(
-        f"{os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')}/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['DEEPSEEK_API_KEY'].strip()}"},
-        json={
-            "model": modelo(),
-            "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.2,
-            # El modo "pensar" viene activo por defecto y multiplica los tokens de salida (lo más caro).
-            # Para resumir no hace falta; DEEPSEEK_THINKING=enabled lo reactiva.
-            "thinking": {"type": os.environ.get("DEEPSEEK_THINKING", "disabled")},
-        },
-        timeout=120,
-    )
+    for espera in (*ESPERAS, None):
+        respuesta = httpx.post(
+            f"{os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')}/chat/completions",
+            headers={"Authorization": f"Bearer {os.environ['DEEPSEEK_API_KEY'].strip()}"},
+            json={
+                "model": modelo(),
+                "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+                # El modo "pensar" viene activo por defecto y multiplica los tokens de salida (lo más caro).
+                # Para resumir no hace falta; DEEPSEEK_THINKING=enabled lo reactiva.
+                "thinking": {"type": os.environ.get("DEEPSEEK_THINKING", "disabled")},
+            },
+            timeout=120,
+        )
+        estado = getattr(respuesta, "status_code", 200)
+        if espera is None or not (estado == 429 or estado >= 500):
+            break
+        time.sleep(espera)
     respuesta.raise_for_status()
     datos = respuesta.json()
     tokens = datos.get("usage", {})

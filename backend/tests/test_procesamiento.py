@@ -145,3 +145,23 @@ def test_documento_sin_pdf_en_el_servidor(cliente):
     assert cliente.get("/api/documentos/2").json()["pdf_url"] is None  # datos de ejemplo: no hay PDF
     assert cliente.get("/api/documentos/2/pdf").status_code == 404
     assert cliente.get("/api/documentos/2/paginas/1").json()["pdf_url"] is None
+
+
+def test_llm_reintenta_si_deepseek_dice_que_vamos_muy_rapido(monkeypatch):
+    estados = [429, 200]
+
+    class Respuesta:
+        def __init__(self):
+            self.status_code = estados.pop(0)
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(self.status_code)
+
+        def json(self):
+            return {"choices": [{"message": {"content": '{"ok": true}'}}], "usage": {}}
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "clave-de-prueba")
+    monkeypatch.setattr(llm.httpx, "post", lambda url, headers, json, timeout: Respuesta())
+    monkeypatch.setattr(llm.time, "sleep", lambda s: None)
+    assert llm.pedir_json("s", "u", {}) == {"ok": True} and estados == []

@@ -512,3 +512,9 @@ nav ul {
 .chat-documentos .btn-link { text-align: left; font-size: .82rem; padding: 2px 0; }
 .chat-documentos .btn-link span { color: var(--text-muted); }
 .chat-entendido { font-size: .72rem; color: var(--text-muted); margin-top: 8px; }
+
+/* Chatbot: preguntas sugeridas y aviso de cifras que no se pudieron comprobar */
+.chat-sugeridas { display: flex; flex-direction: column; gap: 6px; align-self: stretch; margin: 2px 0 6px; }
+.chat-sugeridas button { text-align: left; background: #eef4fc; border: 1px solid #cfe0f5; color: var(--primary-color); border-radius: var(--border-radius); padding: 7px 10px; font-size: .8rem; cursor: pointer; }
+.chat-sugeridas button:hover { background: #e0ecfa; border-color: var(--accent-color); }
+.chat-verificar { font-size: .74rem; color: #b45309; margin-top: 6px; }
