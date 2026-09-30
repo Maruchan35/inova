@@ -1,8 +1,8 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '../api.js';
 import Fragmento from './Fragmento.jsx';
 
-export default function Chatbot({ filtros, onVerPagina }) {
+export default function Chatbot({ filtros, onVerPagina, abiertoPorDefecto, onCerrar }) {
   const [open, setOpen] = useState(false);
   const [pregunta, setPregunta] = useState('');
   const [mensajes, setMensajes] = useState([{
@@ -11,6 +11,12 @@ export default function Chatbot({ filtros, onVerPagina }) {
   }]);
   const [cargando, setCargando] = useState(false);
   const bodyRef = useRef(null);
+
+  useEffect(() => {
+    if (abiertoPorDefecto) {
+      setOpen(true);
+    }
+  }, [abiertoPorDefecto]);
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -35,14 +41,14 @@ export default function Chatbot({ filtros, onVerPagina }) {
 
   return (
     <div className="chatbot-container">
-      <div className="chat-toggle" onClick={() => setOpen(!open)}>
+      <div className="chat-toggle" onClick={() => { setOpen(!open); if (open && onCerrar) onCerrar(); }}>
         <i className={open ? "fa-solid fa-xmark" : "fa-regular fa-message"}></i>
       </div>
       {open && (
         <div className="chat-window">
           <div className="chat-header">
             <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
-            <i className="fa-solid fa-xmark close-btn" onClick={() => setOpen(false)} style={{ cursor: 'pointer' }}></i>
+            <i className="fa-solid fa-xmark close-btn" onClick={() => { setOpen(false); if (onCerrar) onCerrar(); }} style={{ cursor: 'pointer' }}></i>
           </div>
           <div className="chat-messages" ref={bodyRef}>
             {mensajes.map((m, i) => (

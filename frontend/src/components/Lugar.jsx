@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 import Concentracion from './Concentracion.jsx';
-import Chatbot from './Chatbot.jsx';
 import Suscripcion from './Suscripcion.jsx';
 
 // Coordenadas base por defecto si no hay
@@ -140,17 +139,17 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
         </div>
       )}
 
-      <div className="cta-container">
-        <button className="cta-btn" onClick={() => alert("Aquí se abriría la vista completa de categorías y años.")}>
-          Ver todos los archivos
-        </button>
-      </div>
+      {categoriaActiva && (
+        <div className="cta-container">
+          <button className="cta-btn" onClick={() => setCategoriaActiva(null)}>
+            Ver todos los archivos
+          </button>
+        </div>
+      )}
 
       <Concentracion filtros={filtros} locationName={locationName} />
       
       <Suscripcion lugar={lugar} />
-      
-      <Chatbot filtros={filtros} onVerPagina={onVerPagina} />
     </div>
   );
 }
