@@ -154,3 +154,14 @@ def test_procesa_varios_a_la_vez(entorno):
     assert (r["procesados"], r["fallidos"]) == (6, 0)
     assert {d["estatus"] for d in documentos(con)} == {"listo"}
     assert con.execute("SELECT COUNT(*) FROM paginas p JOIN documentos d ON d.id = p.documento_id WHERE d.titulo LIKE 'Documento %'").fetchone()[0] == 18
+
+
+def test_puede_omitir_los_pdf_escaneados(entorno):
+    cargar, con, carpeta, pdfs = entorno
+    (pdfs / "escaneado.pdf").write_bytes(pdf_con_texto([""]))  # una página sin texto
+    csv = escribir_csv(carpeta, "archivo,estado,municipio,seccion,titulo,anio\n"
+                                "escaneado.pdf,Guanajuato,,informes,Escaneado,2025\n"
+                                "informe-estatal.pdf,Guanajuato,,informes,Informe,2025\n")
+    r = cargar.cargar(con, csv, pdfs, omitir_escaneados=True)
+    assert (r["procesados"], r["fallidos"], len(r["escaneados"])) == (1, 0, 1)
+    assert [d["titulo"] for d in documentos(con)] == ["Informe"]  # el escaneado no queda en la base

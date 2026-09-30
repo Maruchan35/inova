@@ -210,14 +210,14 @@ def _procesar_en_hilo(ruta_db: str, documento_id: int, ruta_pdf: Path) -> tuple[
 
 
 def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reprocesar=False, solo_revisar=False,
-           hilos: int = 3) -> dict:
+           hilos: int = 3, omitir_escaneados: bool = False) -> dict:
     validos, errores, avisos = validar(con, leer_csv(ruta_csv), carpeta_pdfs)
     for e in errores:
         print(f"  ERROR {e}")
     for a in avisos:
         print(f"  REVISAR {a}")
     resultado = {"procesados": 0, "saltados": 0, "fallidos": 0, "invalidos": len(errores), "avisos": len(avisos),
-                 "uso": {}, "segundos": 0.0}
+                 "escaneados": [], "uso": {}, "segundos": 0.0}
     if solo_revisar:
         print(f"Revisión: {len(validos)} filas correctas ({len(avisos)} para revisar), {len(errores)} con errores."
               " No se procesó nada.")
@@ -249,6 +249,12 @@ def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reproces
                 resultado["procesados"] += 1
                 print(f"{prefijo}\n    listo (id {documento_id}): {fila['total_paginas']} páginas, {fila['puntos']} puntos"
                       f" · {bitacora['motor']} · {bitacora['segundos']} s · ${bitacora['costo_usd']:.4f} USD", flush=True)
+            elif omitir_escaneados and "texto seleccionable" in (fila["error"] or ""):
+                # Escaneado: sin texto no se puede buscar ni citar. Se quita de la base y queda para OCR.
+                con.execute("DELETE FROM documentos WHERE id = ?", (documento_id,))
+                con.commit()
+                resultado["escaneados"].append(doc["archivo"])
+                print(f"{prefijo}  (escaneado, sin texto: se omite hasta tener OCR)", flush=True)
             else:
                 resultado["fallidos"] += 1
                 print(f"{prefijo}\n    ERROR (id {documento_id}): {fila['error']}", flush=True)
@@ -260,7 +266,7 @@ def cargar(con: sqlite3.Connection, ruta_csv: Path, carpeta_pdfs: Path, reproces
     print(
         f"\nTerminado: {resultado['procesados']} procesados, {resultado['saltados']} ya estaban cargados,"
         f" {resultado['fallidos']} con error, {resultado['invalidos']} filas inválidas en el CSV,"
-        f" {resultado['avisos']} para revisar a mano."
+        f" {resultado['avisos']} para revisar a mano, {len(resultado['escaneados'])} escaneados omitidos (necesitan OCR)."
         f"\nTiempo total: {resultado['segundos']} s · tokens: {uso.get('entrada', 0):,} de entrada,"
         f" {uso.get('salida', 0):,} de salida · costo aprox.: ${llm.costo_usd(uso):.4f} USD"
     )
@@ -274,13 +280,19 @@ def main() -> int:
     parser.add_argument("--reprocesar", action="store_true", help="procesa también los que ya están listos")
     parser.add_argument("--solo-revisar", action="store_true", help="revisa el CSV sin procesar nada")
     parser.add_argument("--hilos", type=int, default=3, help="documentos que se procesan a la vez")
+    parser.add_argument("--omitir-escaneados", action="store_true",
+                        help="no deja en la base los PDF escaneados (sin texto); los lista para hacerles OCR después")
     args = parser.parse_args()
     if not args.csv.is_file():
         print(f"No existe {args.csv}")
         return 1
     con = db.abrir()
     try:
-        r = cargar(con, args.csv, args.pdfs, args.reprocesar, args.solo_revisar, args.hilos)
+        r = cargar(con, args.csv, args.pdfs, args.reprocesar, args.solo_revisar, args.hilos, args.omitir_escaneados)
+        if r["escaneados"]:
+            lista = args.csv.with_name("pendientes_ocr.txt")
+            lista.write_text("\n".join(r["escaneados"]) + "\n", encoding="utf-8")
+            print(f"Lista de escaneados para OCR: {lista}")
     finally:
         con.close()
     return 1 if r["fallidos"] or r["invalidos"] else 0
