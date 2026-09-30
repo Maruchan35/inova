@@ -36,13 +36,13 @@ export default function Chatbot({ filtros, onVerPagina }) {
   return (
     <div className="chatbot-container">
       <div className="chat-toggle" onClick={() => setOpen(!open)}>
-        <i className={open ? "fa-regular fa-xmark" : "fa-regular fa-message"}></i>
+        <i className={open ? "fa-solid fa-xmark" : "fa-regular fa-message"}></i>
       </div>
       {open && (
         <div className="chat-window">
           <div className="chat-header">
-            <h4 style={{ fontWeight: 500 }}><i className="fa-regular fa-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
-            <i className="fa-regular fa-xmark close-btn" onClick={() => setOpen(false)} style={{ cursor: 'pointer' }}></i>
+            <h4 style={{ fontWeight: 500 }}><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '8px' }}></i> Asistente IA</h4>
+            <i className="fa-solid fa-xmark close-btn" onClick={() => setOpen(false)} style={{ cursor: 'pointer' }}></i>
           </div>
           <div className="chat-messages" ref={bodyRef}>
             {mensajes.map((m, i) => (

@@ -35,7 +35,7 @@ export default function Documento({ id, onVerPagina }) {
 
       {doc.estatus !== 'listo' ? (
         <div style={{ padding: '2rem', background: 'white', borderRadius: '12px', textAlign: 'center' }}>
-          <i className="fa-regular fa-spinner-third fa-spin fa-2x" style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}></i>
+          <i className="fa-solid fa-spinner fa-spin fa-2x" style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}></i>
           <p style={{ fontSize: '1.2rem', color: 'var(--primary-color)', fontWeight: 500 }}>Procesando documento...</p>
           <p className="tenue">La IA está analizando y extrayendo los datos importantes ({doc.estatus}).</p>
         </div>

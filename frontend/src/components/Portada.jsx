@@ -53,7 +53,7 @@ export default function Portada({ onElegir }) {
         
         <div className="search-container" ref={wrapperRef}>
           <div className="search-bar">
-            <i className="fa-regular fa-magnifying-glass" style={{ color: '#aaa', marginLeft: '15px' }}></i>
+            <i className="fa-solid fa-magnifying-glass" style={{ color: '#aaa', marginLeft: '15px' }}></i>
             <input 
               type="text" 
               value={texto} 
@@ -69,7 +69,7 @@ export default function Portada({ onElegir }) {
             <ul className="search-results">
               {resultados.map((r, i) => (
                 <li key={i} onClick={() => onElegir({ tipo: r.tipo, id: r.id })}>
-                  <i className="fa-regular fa-location-dot" style={{ marginRight: '10px', color: '#ccc' }}></i>
+                  <i className="fa-solid fa-location-dot" style={{ marginRight: '10px', color: '#ccc' }}></i>
                   {r.nombre} {r.tipo === 'estado' ? '(Estado)' : ''}
                 </li>
               ))}
@@ -89,7 +89,7 @@ export default function Portada({ onElegir }) {
               <p>Los gobiernos suben sus documentos públicos y reportes.</p>
             </div>
             <div className="cf-card">
-              <i className="fa-regular fa-microchip"></i>
+              <i className="fa-solid fa-microchip"></i>
               <h4>2. Procesamiento de IA</h4>
               <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
             </div>
@@ -111,7 +111,7 @@ export default function Portada({ onElegir }) {
               <p>Los gobiernos suben sus documentos públicos y reportes.</p>
             </div>
             <div className="cf-card">
-              <i className="fa-regular fa-microchip"></i>
+              <i className="fa-solid fa-microchip"></i>
               <h4>2. Procesamiento de IA</h4>
               <p>La IA extrae resúmenes y puntos clave automáticamente.</p>
             </div>

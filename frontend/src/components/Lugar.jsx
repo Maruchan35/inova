@@ -30,24 +30,28 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
       mapInstance.current = window.L.map(mapRef.current, { zoomControl: false }).setView(DEFAULT_CENTER, 5);
       window.L.control.zoom({ position: 'bottomright' }).addTo(mapInstance.current);
       
-      // Clean map tile (Voyager without labels or clean standard)
-      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap'
+      window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
       }).addTo(mapInstance.current);
       
       markersLayer.current = window.L.layerGroup().addTo(mapInstance.current);
     }
 
-    // Simularemos el centro basado en un hash del nombre del lugar para no mover el mapa al azar
-    const hash = datos.nombre.length; 
-    // México center +- some degrees
-    const centerLat = 20 + (hash % 10) * 0.5;
-    const centerLng = -100 + (hash % 10) * 0.5;
-    
-    mapInstance.current.flyTo([centerLat, centerLng], 12, { duration: 1.5 });
-    
-    // Clear markers when data changes
-    if (markersLayer.current) markersLayer.current.clearLayers();
+    // Centro real: coordenadas de la cabecera (catálogo INEGI) que manda el backend.
+    const tieneCoordenadas = datos.latitud != null && datos.longitud != null;
+    const centro = tieneCoordenadas ? [datos.latitud, datos.longitud] : DEFAULT_CENTER;
+    const zoom = tieneCoordenadas ? (lugar.tipo === 'municipio' ? 12 : 7) : 5;
+    mapInstance.current.flyTo(centro, zoom, { duration: 1.5 });
+
+    if (markersLayer.current) {
+      markersLayer.current.clearLayers();
+      if (tieneCoordenadas) {
+        const etiqueta = document.createElement('strong');
+        etiqueta.textContent = datos.nombre; // texto, no HTML
+        window.L.marker(centro).bindPopup(etiqueta).addTo(markersLayer.current);
+      }
+    }
     
     // We will save the center to state so we can render pins
     return () => {
@@ -59,51 +63,6 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
     }
   }, [datos]);
 
-  // Render markers when active category changes
-  useEffect(() => {
-    if (!mapInstance.current || !markersLayer.current || !datos) return;
-    
-    markersLayer.current.clearLayers();
-    if (!categoriaActiva) return;
-
-    const seccion = datos.secciones.find(s => s.clave === categoriaActiva);
-    if (!seccion || seccion.documentos.length === 0) return;
-
-    const center = mapInstance.current.getCenter();
-    const iconForSection = (clave) => {
-      const icons = {
-        informes: 'fa-regular fa-file-contract',
-        presupuesto: 'fa-regular fa-file-invoice-dollar',
-        obras: 'fa-solid fa-person-digging',
-        actas: 'fa-regular fa-gavel',
-        contratos: 'fa-regular fa-file-signature'
-      };
-      return icons[clave] || 'fa-regular fa-folder';
-    };
-
-    const iconClass = iconForSection(categoriaActiva);
-    const markerIcon = window.L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="width: 38px; height: 38px; background-color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid white;">
-                <i class="${iconClass}"></i></div>`,
-        iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38]
-    });
-
-    seccion.documentos.forEach((doc, idx) => {
-      // Offset aleatorio pero determinista
-      const latOffset = (Math.sin(idx * 123) * 0.02);
-      const lngOffset = (Math.cos(idx * 321) * 0.02);
-      
-      const popup = `<div style="text-align:center; padding:5px; font-family: 'Inter', sans-serif;">
-                      <h4 style="color: #1a1a2e; margin:0 0 5px 0; font-size: 1rem;">${doc.titulo}</h4>
-                      <span style="font-size:12px; color:#888;">${doc.anio}</span>
-                     </div>`;
-      window.L.marker([center.lat + latOffset, center.lng + lngOffset], { icon: markerIcon })
-        .bindPopup(popup)
-        .addTo(markersLayer.current);
-    });
-    
-  }, [categoriaActiva, datos]);
 
 
   if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
@@ -125,7 +84,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
       informes: 'fa-regular fa-file-lines',
       presupuesto: 'fa-regular fa-money-bill-1',
       obras: 'fa-solid fa-person-digging', // obras is usually solid, or use fa-building
-      actas: 'fa-regular fa-file-signature',
+      actas: 'fa-solid fa-file-signature',
       contratos: 'fa-regular fa-handshake'
     };
     return icons[clave] || 'fa-regular fa-folder';
@@ -135,10 +94,10 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
     <div className="lugar-container">
       <div className="lugar-header">
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="fa-regular fa-map-location-dot" style={{ color: 'var(--accent-color)' }}></i> {locationName}
+          <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)' }}></i> {locationName}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-          Selecciona una categoría para visualizar los documentos en el mapa.
+          Selecciona una categoría para filtrar los documentos.
         </p>
       </div>
 
@@ -174,7 +133,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina }) {
                 <p><i className="fa-regular fa-calendar" style={{marginRight:'5px'}}></i> {d.anio} {d.estatus !== 'listo' && `(${d.estatus})`}</p>
               </div>
               <button onClick={() => onDocumento(d.id)}>
-                Ver detalle <i className="fa-regular fa-arrow-right"></i>
+                Ver detalle <i className="fa-solid fa-arrow-right"></i>
               </button>
             </div>
           ))}
