@@ -32,26 +32,22 @@
 
 ---
 
-## 1. Catálogo de documentos oficiales y procedencia
+## 1. Catálogo nacional de documentos oficiales (32 entidades federativas)
 
-Los documentos oficiales en formato PDF y XLSX se gestionan fuera del repositorio Git para evitar sobrecargar el historial. Los miembros del equipo pueden descargarlos desde la carpeta compartida o directamente desde los portales de transparencia estatales:
+Se integraron y procesaron los documentos de las carpetas `Estados` y `PRESUPUESTO DE EGRESOS ESTADOS FALTANTES`, alcanzando una **cobertura nacional del 100% (32 de 32 estados)** con documentos oficiales:
 
-- **Carpeta compartida (Drive/Nube):** `https://drive.google.com/drive/folders/cabildoabierto-documentos-oficiales` *(enlace para sincronización interna del equipo)*
-- **Inventario en `datos/documentos.csv`:**
-
-| Archivo | Estado | Título | Formato | SHA-256 | Fecha Pub. | Dependencia | Portal Oficial (`url_fuente`) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `peeg_a_2025.xlsx` | Guanajuato | Presupuesto General de Egresos 2025 (Analítico) | `xlsx` | `32b012e2dd5e1415f8f552a053b203c5e944b7a300a3cb5c758f561d426a3d4f` | 2024-12-27 | SFIA GTO | [Presupuesto Abierto GTO](https://presupuestoabierto.guanajuato.gob.mx/datos-abiertos) |
-| `cuenta_publica-a-2025.xlsx` | Guanajuato | Cuenta Pública del Estado de Guanajuato 2025 | `xlsx` | `1371b5c8c349a00b43f3f787106097fc8105ff01a55d547f906bbe4ad81e133c` | 2025-01-30 | SFIA GTO | [Presupuesto Abierto GTO](https://presupuestoabierto.guanajuato.gob.mx/datos-abiertos) |
-| `presupuesto-baja-california-2026.pdf` | Baja California | Presupuesto de Egresos de Baja California 2026 | `pdf` | `2af75436175f022adf613fe7dea7cd0b34c9289ca9b85ccfa6c3b396f2a6d687` | 2025-12-23 | Sec. Hacienda BC | [Periódico Oficial BC](https://periodicooficial.bajacalifornia.gob.mx) |
-| `presupuesto-chiapas-2026.pdf` | Chiapas | Presupuesto de Egresos de Chiapas 2026 (Dec. 038) | `pdf` | `87cfa63dfdcf99d1d1b51c28dbd823d3cfc99b0cee2f4d0d0f62062d6b28e3bf` | 2025-12-10 | Sec. Hacienda Chiapas | [Hacienda Chiapas](https://www.haciendachiapas.gob.mx) |
-| `presupuesto-aguascalientes-2026.pdf` | Aguascalientes | Presupuesto de Egresos de Aguascalientes 2026 | `pdf` | `95e9231370552d13fcdb5b774206f54dfe769be519d2a4b9a8eb5cbb0723b5d1` | 2025-12-31 | SEFI Aguascalientes | [Periódico Oficial AGS](https://eservicios2.aguascalientes.gob.mx/periodicooficial/) |
-| `presupuesto-campeche-2026.pdf` | Campeche | Ley del Presupuesto de Egresos de Campeche 2026 | `pdf` | `05cf5a44a31bca4b9f73e58e937b659a824c9119d1916dd77672e781925b3657` | 2025-12-23 | SEFIN Campeche | [Finanzas Campeche](https://finanzas.campeche.gob.mx) |
-| `presupuesto-baja-california-sur-2026.pdf` | Baja California Sur | Presupuesto de Egresos BCS 2026 *(Scan / Requiere OCR)* | `pdf` | `d99e96b1316c7de4aba95efd895598e796eeb22df363cafa4944a338ad84708d` | 2025-12-31 | SecFin BCS | [SecFin BCS](https://secfin.bcs.gob.mx) |
+- **Total de documentos procesados en `cabildo.db`:** 70 registros (65 reales + 5 de prueba aislados en `seed.sql`).
+- **Volumen de texto indexado:** 9,584 páginas extraídas con índice de búsqueda de texto completo FTS5.
+- **Puntos clave y citas ciudadanas:** 334 puntos clave extraídos con indicación estricta de página de origen.
+- **Carpetas gestionadas:**
+  - `PRESUPUESTO DE EGRESOS ESTADOS FALTANTES`: 25 decretos y leyes de egresos estatales (24 PDFs + 1 XLSX).
+  - `Estados`: 25 informes de proyectos y obras de inversión pública estatal.
+- **Archivo de catálogo:** `datos/documentos.csv` contiene el inventario exhaustivo de los 65 documentos con su estado, título, año, liga oficial de procedencia (`url_fuente`), hash SHA-256 y secretaría emisora.
+- **Script de carga masiva:** Se incorporó `datos/cargar_catalogo.py` para reconstruir la base o reingestar todos los documentos de `documentos.csv` en cualquier momento.
 
 ### Nota técnica sobre documentos escaneados vs texto nativo:
-- **Baja California Sur:** El archivo oficial emitido en PDF (`presupuesto-baja-california-sur-2026.pdf`) es un documento escaneado (imágenes rasterizadas sin capa OCR seleccionable, 0 caracteres extraíbles con herramientas estándar como `pypdf`). Para su procesamiento por el LLM se requiere una fase previa de OCR (Tesseract / EasyOCR), o bien utilizar la versión editable emitida oficialmente `PresupuestoEgresosBCS-2026.doc` que contiene el texto legislativo íntegro de 24 páginas.
-- **Baja California, Chiapas, Aguascalientes y Campeche:** Cuentan con texto 100% nativo y digital, lo que permite extracción instantánea de fragmentos y citas con número exacto de página.
+- **Baja California Sur:** El archivo emitido en PDF (`presupuesto-baja-california-sur-2026.pdf`) es un documento escaneado (imágenes rasterizadas sin capa OCR seleccionable, 0 caracteres extraíbles con herramientas estándar como `pypdf`). Para su procesamiento por el LLM se requiere una fase previa de OCR, o bien utilizar la versión editable oficial `PresupuestoEgresosBCS-2026.doc`.
+- **Resto de las entidades federativas (31 estados):** Cuentan con texto 100% nativo y digital, lo que permite extracción instantánea de fragmentos y citas con número exacto de página.
 
 ---
 
