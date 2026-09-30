@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 60" width="320" height="60">
+  <g fill="#1a2530">
+    <!-- Triangular pediment roof -->
+    <path d="M 36 3 L 67 18 L 5 18 Z" />
+    <!-- Circular cutout in pediment -->
+    <circle cx="36" cy="11" r="3.8" fill="white" />
+    <!-- Architrave / beam under pediment -->
+    <rect x="3" y="19" width="66" height="3.5" rx="0.5" />
+    <!-- Column 1 (Left) -->
+    <rect x="11" y="23.5" width="12" height="2" rx="0.5" />
+    <rect x="13" y="25.5" width="8" height="19" />
+    <rect x="11" y="44.5" width="12" height="2" rx="0.5" />
+    <!-- Column 2 (Center) -->
+    <rect x="30" y="23.5" width="12" height="2" rx="0.5" />
+    <rect x="32" y="25.5" width="8" height="19" />
+    <rect x="30" y="44.5" width="12" height="2" rx="0.5" />
+    <!-- Column 3 (Right) -->
+    <rect x="49" y="23.5" width="12" height="2" rx="0.5" />
+    <rect x="51" y="25.5" width="8" height="19" />
+    <rect x="49" y="44.5" width="12" height="2" rx="0.5" />
+    <!-- Plinth step 1 -->
+    <rect x="5" y="47.5" width="62" height="3" rx="0.5" />
+    <!-- Plinth step 2 (base) -->
+    <rect x="1" y="51.5" width="70" height="3.5" rx="0.5" />
+    
+    <!-- Text CABILDOABIERTO -->
+    <text x="82" y="38" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="24" font-weight="800" letter-spacing="1.2">CABILDOABIERTO</text>
+  </g>
+</svg>

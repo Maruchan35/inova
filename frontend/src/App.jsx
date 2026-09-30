@@ -7,6 +7,8 @@ import PaginaModal from './components/PaginaModal.jsx';
 import Chatbot from './components/Chatbot.jsx';
 import Suscripcion from './components/Suscripcion.jsx';
 import ModoVoz from './components/ModoVoz.jsx';
+import Logo, { LogoIcono } from './components/Logo.jsx';
+import EspacioPublicidad, { ModalPublicidad } from './components/Publicidad.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -53,6 +55,7 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [pagina, setPagina] = useState(null);
   const [chatbotAbierto, setChatbotAbierto] = useState(false);
+  const [modalPublicidad, setModalPublicidad] = useState(false);
   const [contexto, setContexto] = useState('todos los documentos'); // sobre qué pregunta el chatbot
   // Modo por voz: `pedirVoz` enciende el micrófono, `dictado` es la pregunta dicha que va al chatbot y
   // `seccionPedida` la sección que se pidió al decir "quiero ver el presupuesto de Guanajuato".
@@ -133,16 +136,12 @@ export default function App() {
   return (
     <>
       <header>
-        <div 
-          className="logo interactive-logo" 
+        <Logo 
           onClick={() => {
             navigate('/');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          title="Ir a Inicio"
-        >
-          <i className="fa-regular fa-message"></i> CabildoAbierto
-        </div>
+        />
         <nav>
           <ul>
             {!esPaginaPrincipal && (
@@ -182,11 +181,16 @@ export default function App() {
 
       <PaginaModal pagina={pagina} onClose={() => setPagina(null)} onVerPagina={verPagina} />
 
+      {/* Espacio publicitario en la orilla inferior izquierda (inicia siempre minimizado hasta dar clic) */}
+      <EspacioPublicidad onAbrirModal={() => setModalPublicidad(true)} />
+
       <main>
         <ErrorBoundary>
           {content}
         </ErrorBoundary>
       </main>
+
+      <ModalPublicidad abierto={modalPublicidad} onCerrar={() => setModalPublicidad(false)} />
 
       <Suscripcion key={currentPath} autoOpen={false} lugar={lugarActual} nombre={isLugar ? 'tu gobierno' : 'tu estado'} />
 
@@ -202,8 +206,9 @@ export default function App() {
       />
 
       <footer>
-        <p>
-          &copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.
+        <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <LogoIcono size={18} />
+          <span>&copy; 2026 CabildoAbierto. Plataforma de Transparencia Ciudadana impulsada por Inteligencia Artificial.</span>
           <span className="version-badge">v4.0.0</span>
         </p>
       </footer>
