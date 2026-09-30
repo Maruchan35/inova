@@ -12,11 +12,15 @@ export default function PaginaModal({ pagina, onClose, onVerPagina }) {
         <div className="pagina-acciones">
           <button disabled={n <= 1} onClick={() => onVerPagina(doc, n - 1)}>‹ Anterior</button>
           <button disabled={!!total && n >= total} onClick={() => onVerPagina(doc, n + 1)}>Siguiente ›</button>
-          {pagina.pdf_url && (
+          {pagina.pdf_url ? (
             <a className="pagina-pdf" href={pagina.pdf_url} target="_blank" rel="noopener noreferrer">
               <i className="fa-regular fa-file-pdf"></i> Ver en el PDF original
             </a>
-          )}
+          ) : pagina.url_fuente ? (
+            <a className="pagina-pdf" href={pagina.url_fuente} target="_blank" rel="noopener noreferrer">
+              <i className="fa-solid fa-arrow-up-right-from-square"></i> Ver fuente oficial
+            </a>
+          ) : null}
           <button onClick={onClose}>Cerrar vista</button>
         </div>
       </div>

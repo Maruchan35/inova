@@ -1,14 +1,16 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 
 function quitarAcentos(str) {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-export default function Portada({ onElegir }) {
+export default function Portada({ onElegir, onDocumento }) {
   const [estados, setEstados] = useState([]);
   const [texto, setTexto] = useState('');
-  const [resultados, setResultados] = useState([]);
+  const [lugares, setLugares] = useState([]);
+  const [documentos, setDocumentos] = useState([]);
+  const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState('');
   const wrapperRef = useRef(null);
 
@@ -18,42 +20,89 @@ export default function Portada({ onElegir }) {
 
   useEffect(() => {
     setAviso('');
-    if (!texto.trim()) {
-      setResultados([]);
+    const q = texto.trim();
+    if (!q) {
+      setLugares([]);
+      setDocumentos([]);
       return;
     }
-    const txt = quitarAcentos(texto.trim());
-    let res = [];
+    const txt = quitarAcentos(q);
+
+    // 1. Búsqueda de Lugares (Estados y Municipios corregido)
+    let resLugares = [];
     estados.forEach(e => {
-      if (quitarAcentos(e.nombre).includes(txt)) {
-        res.push({ tipo: 'estado', id: e.id, nombre: e.nombre });
+      const eNom = quitarAcentos(e.nombre);
+      if (eNom.includes(txt)) {
+        resLugares.push({
+          tipo: 'estado',
+          id: e.id,
+          nombre: e.nombre,
+          exacto: eNom === txt,
+        });
       }
       e.municipios.forEach(m => {
-        if (quitarAcentos(m.nombre).includes(txt) || quitarAcentos(e.nombre).includes(txt)) {
-          res.push({ tipo: 'municipio', id: m.id, nombre: `${m.nombre}, ${e.nombre}` });
+        const mNom = quitarAcentos(m.nombre);
+        const comb = quitarAcentos(`${m.nombre} ${e.nombre}`);
+        if (mNom.includes(txt) || comb.includes(txt)) {
+          resLugares.push({
+            tipo: 'municipio',
+            id: m.id,
+            nombre: `${m.nombre}, ${e.nombre}`,
+            exacto: mNom === txt,
+          });
         }
       });
     });
-    setResultados(res.slice(0, 8)); // max 8
+
+    resLugares.sort((a, b) => (b.exacto ? 1 : 0) - (a.exacto ? 1 : 0));
+    setLugares(resLugares.slice(0, 5));
+
+    // 2. Búsqueda de Documentos y Temas en FTS5
+    if (q.length >= 3) {
+      setBuscando(true);
+      const timer = setTimeout(() => {
+        api.buscar(q)
+          .then(data => {
+            const vistos = new Set();
+            const docs = [];
+            for (const r of (data.resultados || [])) {
+              if (!vistos.has(r.documento_id)) {
+                vistos.add(r.documento_id);
+                docs.push(r);
+                if (docs.length >= 5) break;
+              }
+            }
+            setDocumentos(docs);
+          })
+          .catch(() => setDocumentos([]))
+          .finally(() => setBuscando(false));
+      }, 250);
+      return () => clearTimeout(timer);
+    } else {
+      setDocumentos([]);
+    }
   }, [texto, estados]);
 
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setResultados([]);
+        setLugares([]);
+        setDocumentos([]);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [wrapperRef]);
 
-  // "Explorar" o Enter: abre el primer lugar que coincide con lo escrito.
+  // "Explorar" o Enter: abre el primer lugar o documento coincidente
   function explorar(e) {
     e.preventDefault();
-    if (resultados.length > 0) {
-      onElegir({ tipo: resultados[0].tipo, id: resultados[0].id });
+    if (lugares.length > 0) {
+      onElegir({ tipo: lugares[0].tipo, id: lugares[0].id });
+    } else if (documentos.length > 0 && onDocumento) {
+      onDocumento(documentos[0].documento_id);
     } else if (texto.trim()) {
-      setAviso('No encontramos ese lugar. Prueba con el nombre de un estado o municipio.');
+      setAviso('No encontramos resultados para esa búsqueda. Prueba con el nombre de un estado, municipio, o tema como "Presupuesto" o "Obras".');
     }
   }
 
@@ -78,14 +127,35 @@ export default function Portada({ onElegir }) {
           </form>
           {aviso && <p className="tenue" style={{ marginTop: '10px' }}>{aviso}</p>}
           
-          {resultados.length > 0 && (
+          {(lugares.length > 0 || documentos.length > 0) && (
             <ul className="search-results">
-              {resultados.map((r, i) => (
-                <li key={i} onClick={() => onElegir({ tipo: r.tipo, id: r.id })}>
-                  <i className="fa-solid fa-location-dot" style={{ marginRight: '10px', color: '#ccc' }}></i>
-                  {r.nombre} {r.tipo === 'estado' ? '(Estado)' : ''}
-                </li>
-              ))}
+              {lugares.length > 0 && (
+                <>
+                  <li className="search-group-title"><i className="fa-solid fa-map-location-dot" style={{ marginRight: '6px' }}></i> Estados y Municipios</li>
+                  {lugares.map((r, i) => (
+                    <li key={`lugar-${i}`} onClick={() => onElegir({ tipo: r.tipo, id: r.id })}>
+                      <i className="fa-solid fa-location-dot" style={{ marginRight: '10px', color: 'var(--accent-color)' }}></i>
+                      <span>{r.nombre}</span> {r.tipo === 'estado' ? <span className="badge-tipo">Estado</span> : ''}
+                    </li>
+                  ))}
+                </>
+              )}
+              {documentos.length > 0 && (
+                <>
+                  <li className="search-group-title"><i className="fa-regular fa-file-pdf" style={{ marginRight: '6px' }}></i> Documentos Oficiales</li>
+                  {documentos.map((d, i) => (
+                    <li key={`doc-${i}`} onClick={() => onDocumento(d.documento_id)} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-regular fa-file-lines" style={{ color: 'var(--primary-color)' }}></i>
+                        <span style={{ fontWeight: 600 }}>{d.documento_titulo}</span>
+                      </div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', paddingLeft: '22px' }}>
+                        {d.lugar} · {d.seccion} (pág. {d.pagina})
+                      </span>
+                    </li>
+                  ))}
+                </>
+              )}
             </ul>
           )}
         </div>

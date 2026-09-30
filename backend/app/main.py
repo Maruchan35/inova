@@ -28,10 +28,11 @@ def _secciones_con_documentos(con: Con, estado_id: int, municipio_id: int | None
     secciones = [dict(s) for s in con.execute("SELECT id, clave, nombre FROM secciones ORDER BY orden")]
     documentos = con.execute(
         """
-        SELECT id, seccion_id, titulo, anio, fecha, total_paginas, estatus
+        SELECT id, seccion_id, titulo, anio, fecha, total_paginas, estatus,
+               url_fuente, formato, dependencia
         FROM documentos
         WHERE estado_id = ? AND municipio_id IS ?
-        ORDER BY fecha DESC
+        ORDER BY COALESCE(anio, 0) DESC, COALESCE(fecha, '') DESC, id DESC
         """,
         (estado_id, municipio_id),
     ).fetchall()
@@ -99,6 +100,7 @@ def ver_municipio(municipio_id: int, con: Con = Depends(conectar)):
         "longitud": fila["longitud"],
         "estado": {"id": fila["estado_id"], "nombre": fila["estado_nombre"]},
         "secciones": _secciones_con_documentos(con, fila["estado_id"], fila["id"]),
+        "documentos_estatales": _secciones_con_documentos(con, fila["estado_id"], None),
     }
 
 
@@ -117,7 +119,7 @@ def ver_documento(documento_id: int, con: Con = Depends(conectar)):
     d = con.execute(
         """
         SELECT d.id, d.titulo, d.anio, d.fecha, d.total_paginas, d.estatus, d.error, d.resumen, d.archivo,
-               d.url_fuente, d.formato, d.fecha_publicacion, d.dependencia,
+               d.url_fuente, d.formato, d.sha256, d.fecha_publicacion, d.dependencia,
                s.clave AS seccion_clave, s.nombre AS seccion_nombre,
                e.id AS estado_id, e.nombre AS estado_nombre,
                m.id AS municipio_id, m.nombre AS municipio_nombre
@@ -135,7 +137,7 @@ def ver_documento(documento_id: int, con: Con = Depends(conectar)):
         "SELECT texto, pagina FROM puntos_clave WHERE documento_id = ? ORDER BY orden", (documento_id,)
     ).fetchall()
     return {
-        **{k: d[k] for k in ("id", "titulo", "anio", "fecha", "total_paginas", "estatus", "error", "resumen")},
+        **{k: d[k] for k in ("id", "titulo", "anio", "fecha", "total_paginas", "estatus", "error", "resumen", "sha256")},
         "fuente": {k: d[k] for k in ("url_fuente", "formato", "fecha_publicacion", "dependencia")},
         "pdf_url": f"/api/documentos/{documento_id}/pdf" if _pdf_original(d["archivo"]) else None,
         "seccion": {"clave": d["seccion_clave"], "nombre": d["seccion_nombre"]},
@@ -150,7 +152,7 @@ def ver_pagina(documento_id: int, numero: int, con: Con = Depends(conectar)):
     fila = con.execute(
         """
         SELECT d.id AS documento_id, d.titulo AS documento_titulo, p.numero AS pagina, p.texto,
-               d.total_paginas, d.archivo
+               d.total_paginas, d.archivo, d.url_fuente
         FROM paginas p JOIN documentos d ON d.id = p.documento_id
         WHERE d.id = ? AND p.numero = ?
         """,
@@ -158,7 +160,7 @@ def ver_pagina(documento_id: int, numero: int, con: Con = Depends(conectar)):
     ).fetchone()
     if fila is None:
         raise HTTPException(status_code=404, detail="Página no encontrada")
-    pagina = {k: fila[k] for k in ("documento_id", "documento_titulo", "pagina", "texto", "total_paginas")}
+    pagina = {k: fila[k] for k in ("documento_id", "documento_titulo", "pagina", "texto", "total_paginas", "url_fuente")}
     pagina["pdf_url"] = (f"/api/documentos/{documento_id}/pdf#page={numero}"
                          if _pdf_original(fila["archivo"]) else None)
     return pagina

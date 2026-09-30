@@ -67,27 +67,74 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
 
   if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
 
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [origenDoc, setOrigenDoc] = useState('todos'); // 'todos', 'municipales', 'estatales'
+
+  if (!datos) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Cargando información...</div>;
+
   const filtros = lugar.tipo === 'estado' ? { estado_id: datos.id } : { municipio_id: datos.id };
   const locationName = datos.nombre + (datos.estado ? `, ${datos.estado.nombre}` : '');
 
-  // Flatten all documents for the carousel if no category is selected, or filter by category
-  let docsToShow = [];
+  // 1. Recopilar documentos municipales y estatales aplicables
+  const esMunicipio = lugar.tipo === 'municipio';
+  let todosDocs = [];
+
+  // Documentos propios
+  datos.secciones.forEach(s => {
+    s.documentos.forEach(d => {
+      todosDocs.push({ ...d, seccionClave: s.clave, seccionNombre: s.nombre, esEstatal: false, origenTexto: 'Municipal' });
+    });
+  });
+
+  // Documentos estatales aplicables al municipio (si aplica)
+  if (esMunicipio && datos.documentos_estatales) {
+    datos.documentos_estatales.forEach(s => {
+      s.documentos.forEach(d => {
+        todosDocs.push({
+          ...d,
+          seccionClave: s.clave,
+          seccionNombre: s.nombre,
+          esEstatal: true,
+          origenTexto: `Estatal (${datos.estado?.nombre || 'Gobierno del Estado'})`
+        });
+      });
+    });
+  }
+
+  // 2. Filtrado por categoría activa, origen (municipal/estatal) y búsqueda por texto
+  let docsToShow = todosDocs;
   if (categoriaActiva) {
-    const sec = datos.secciones.find(s => s.clave === categoriaActiva);
-    if (sec) docsToShow = sec.documentos;
-  } else {
-    datos.secciones.forEach(s => { docsToShow.push(...s.documentos) });
+    docsToShow = docsToShow.filter(d => d.seccionClave === categoriaActiva);
+  }
+  if (esMunicipio && origenDoc === 'municipales') {
+    docsToShow = docsToShow.filter(d => !d.esEstatal);
+  } else if (esMunicipio && origenDoc === 'estatales') {
+    docsToShow = docsToShow.filter(d => d.esEstatal);
+  }
+  if (filtroTexto.trim()) {
+    const q = filtroTexto.trim().toLowerCase();
+    docsToShow = docsToShow.filter(d => 
+      (d.titulo && d.titulo.toLowerCase().includes(q)) ||
+      (d.dependencia && d.dependencia.toLowerCase().includes(q)) ||
+      (d.anio && String(d.anio).includes(q)) ||
+      (d.seccionNombre && d.seccionNombre.toLowerCase().includes(q))
+    );
   }
 
   const iconForSection = (clave) => {
     const icons = {
       informes: 'fa-regular fa-file-lines',
       presupuesto: 'fa-regular fa-money-bill-1',
-      obras: 'fa-solid fa-person-digging', // obras is usually solid, or use fa-building
+      obras: 'fa-solid fa-person-digging',
       actas: 'fa-solid fa-file-signature',
       contratos: 'fa-regular fa-handshake'
     };
     return icons[clave] || 'fa-regular fa-folder';
+  };
+
+  // Conteo total para píldoras
+  const conteoSeccion = (clave) => {
+    return todosDocs.filter(d => d.seccionClave === clave).length;
   };
 
   return (
@@ -102,42 +149,119 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
           <i className="fa-solid fa-map-location-dot" style={{ color: 'var(--accent-color)' }}></i> {locationName}
         </h2>
         <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-          Selecciona una categoría para filtrar los documentos.
+          {esMunicipio 
+            ? `Consulta los documentos oficiales de ${datos.nombre} y los decretos estatales de ${datos.estado?.nombre} aplicables.`
+            : `Consulta los decretos, presupuestos e informes oficiales de ${datos.nombre}.`}
         </p>
       </div>
 
       <div className="pills-container">
-        {datos.secciones.map((s) => (
-          <button 
-            key={s.clave} 
-            className={`pill-btn ${categoriaActiva === s.clave ? 'active' : ''}`}
-            onClick={() => setCategoriaActiva(categoriaActiva === s.clave ? null : s.clave)}
-          >
-            <i className={iconForSection(s.clave)}></i> {s.nombre}
-            <span style={{ background: categoriaActiva === s.clave ? 'rgba(255,255,255,0.2)' : '#f1f2f6', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', marginLeft: '5px' }}>
-              {s.documentos.length}
-            </span>
-          </button>
-        ))}
+        {datos.secciones.map((s) => {
+          const totalSec = conteoSeccion(s.clave);
+          return (
+            <button 
+              key={s.clave} 
+              className={`pill-btn ${categoriaActiva === s.clave ? 'active' : ''}`}
+              onClick={() => setCategoriaActiva(categoriaActiva === s.clave ? null : s.clave)}
+            >
+              <i className={iconForSection(s.clave)}></i> {s.nombre}
+              <span style={{ background: categoriaActiva === s.clave ? 'rgba(255,255,255,0.2)' : '#f1f2f6', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', marginLeft: '5px' }}>
+                {totalSec}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div ref={mapRef} className="map-wrapper"></div>
 
-      <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-color)', marginTop: '3rem' }}>
-        Archivos Fuente {categoriaActiva && `de ${datos.secciones.find(s=>s.clave===categoriaActiva)?.nombre}`}
-      </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginTop: '2rem' }}>
+        <h3 style={{ fontSize: '1.4rem', color: 'var(--primary-color)', margin: 0 }}>
+          Archivos Disponibles {categoriaActiva && `de ${datos.secciones.find(s=>s.clave===categoriaActiva)?.nombre}`}
+          <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '10px' }}>
+            ({docsToShow.length} {docsToShow.length === 1 ? 'documento' : 'documentos'})
+          </span>
+        </h3>
+
+        {esMunicipio && (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              className={`pill-btn ${origenDoc === 'todos' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('todos')}
+            >
+              Todos ({todosDocs.length})
+            </button>
+            <button 
+              className={`pill-btn ${origenDoc === 'municipales' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('municipales')}
+            >
+              Municipales ({todosDocs.filter(d => !d.esEstatal).length})
+            </button>
+            <button 
+              className={`pill-btn ${origenDoc === 'estatales' ? 'active' : ''}`}
+              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              onClick={() => setOrigenDoc('estatales')}
+            >
+              Estatales aplicables ({todosDocs.filter(d => d.esEstatal).length})
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="search-bar" style={{ maxWidth: '420px', margin: '1rem 0 2rem 0', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+        <i className="fa-solid fa-magnifying-glass" style={{ color: '#aaa', marginLeft: '12px' }}></i>
+        <input 
+          type="text" 
+          value={filtroTexto} 
+          onChange={e => setFiltroTexto(e.target.value)} 
+          placeholder="Filtrar por título, año, secretaría..."
+        />
+        {filtroTexto && (
+          <button type="button" onClick={() => setFiltroTexto('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 12px', color: '#888' }}>
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        )}
+      </div>
       
       {docsToShow.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>No hay documentos en esta sección.</p>
+        <div style={{ padding: '2.5rem', background: 'white', borderRadius: '12px', textAlign: 'center', border: '1px dashed #ddd', margin: '1.5rem 0' }}>
+          <i className="fa-regular fa-folder-open fa-2x" style={{ color: '#bbb', marginBottom: '0.8rem' }}></i>
+          <p style={{ color: 'var(--text-muted)' }}>
+            No se encontraron documentos {categoriaActiva ? `en ${datos.secciones.find(s=>s.clave===categoriaActiva)?.nombre}` : ''} con esos filtros.
+          </p>
+          {(categoriaActiva || filtroTexto || origenDoc !== 'todos') && (
+            <button className="btn-link" style={{ marginTop: '0.8rem', color: 'var(--accent-color)', fontWeight: 600 }} onClick={() => { setCategoriaActiva(null); setFiltroTexto(''); setOrigenDoc('todos'); }}>
+              Restablecer filtros y ver todos ({todosDocs.length})
+            </button>
+          )}
+        </div>
       ) : (
         <div className="docs-carousel-container">
           {docsToShow.map(d => (
-            <div key={d.id} className="doc-card">
+            <div key={d.id} className="doc-card" style={{ borderLeft: d.esEstatal ? '4px solid #6c5ce7' : '4px solid var(--accent-color)' }}>
               <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '5px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', background: d.esEstatal ? '#f0eeff' : '#eaf8f0', color: d.esEstatal ? '#6c5ce7' : '#10b981' }}>
+                    {d.origenTexto}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {d.seccionNombre}
+                  </span>
+                </div>
                 <h4>{d.titulo}</h4>
-                <p><i className="fa-regular fa-calendar" style={{marginRight:'5px'}}></i> {d.anio} {d.estatus !== 'listo' && `(${d.estatus})`}</p>
+                <p>
+                  <i className="fa-regular fa-calendar" style={{ marginRight: '5px' }}></i> {d.anio || 'Año no especificado'}
+                  {d.total_paginas > 0 && <span style={{ marginLeft: '10px' }}><i className="fa-regular fa-file" style={{ marginRight: '4px' }}></i> {d.total_paginas} págs</span>}
+                </p>
+                {d.dependencia && (
+                  <p style={{ fontSize: '0.8rem', color: '#777', marginTop: '4px' }}>
+                    <i className="fa-solid fa-building-columns" style={{ marginRight: '5px' }}></i> {d.dependencia}
+                  </p>
+                )}
               </div>
-              <button onClick={() => onDocumento(d.id)}>
+              <button onClick={() => onDocumento(d.id)} style={{ marginTop: '1rem' }}>
                 Ver detalle <i className="fa-solid fa-arrow-right"></i>
               </button>
             </div>
@@ -148,7 +272,7 @@ export default function Lugar({ lugar, onElegir, onDocumento, onVerPagina, onCon
       {categoriaActiva && (
         <div className="cta-container">
           <button className="cta-btn" onClick={() => setCategoriaActiva(null)}>
-            Ver todos los archivos
+            Ver todas las secciones
           </button>
         </div>
       )}

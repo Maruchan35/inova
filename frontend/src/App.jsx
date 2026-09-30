@@ -54,7 +54,7 @@ export default function App() {
     );
     chatbotFiltros = tipo === 'estado' ? { estado_id: id } : { municipio_id: id };
   } else {
-    content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} />;
+    content = <Portada onElegir={(l) => navigate(`/${l.tipo}/${l.id}`)} onDocumento={(dId) => navigate(`/documento/${dId}`)} />;
   }
 
   return (
